@@ -1,0 +1,28 @@
+# Environment and local secrets
+.env*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+*.egg-info/
+
+# Node.js / Next.js
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.log
+*.tsbuildinfo
+
+# Editor and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

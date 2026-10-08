@@ -1,4 +1,6 @@
 import json
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from collections.abc import Callable, Iterator
 from typing import Annotated, Any, Literal, TypedDict
 from uuid import UUID
@@ -34,6 +36,21 @@ SYSTEM_PROMPT = (
     "same action again while one is pending. "
     "Answer questions only from the user's notes, and do not invent facts or "
     "sources. You may create notes immediately when asked."
+)
+
+CAPTURE_PROMPT = (
+    "You handle exactly one short statement from the user, with no conversation "
+    "and no follow-up questions. Decide and act with tools: use create_task for "
+    "reminders and to-dos (set due_at when a date or time is stated; set "
+    "due_has_time true only if a time of day was given); use create_note for "
+    "things to remember; for editing, archiving, or deleting an existing note, "
+    "first call search_notes, and only if exactly one note clearly matches call "
+    "the matching propose_* tool; if zero or several notes match, do not call "
+    "propose_*, and reply briefly that you could not match exactly one note. "
+    "If you are unsure what the user wants, call create_note with the original "
+    "statement as the content and a short title. Never claim a note edit, "
+    "archive, or delete is done; it needs the user's confirmation. After acting, "
+    "reply with one short sentence."
 )
 
 _splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
@@ -76,6 +93,17 @@ class UpdateNoteArgs(BaseModel):
     note_id: UUID = Field(description="The ID of the note to update")
     title: str = Field(description="The note's proposed new title")
     content: str = Field(description="The note's proposed new content")
+
+
+class CreateTaskArgs(BaseModel):
+    title: str = Field(description="Short task title")
+    due_at: str | None = Field(
+        default=None,
+        description="Due date/time as ISO 8601, resolved from the current date and timezone",
+    )
+    due_has_time: bool = Field(
+        default=False, description="True only if the user gave a time of day"
+    )
 
 
 class NoteIdArgs(BaseModel):
@@ -129,6 +157,34 @@ def create_note(title: str, content: str, config: RunnableConfig) -> str:
     note = create(title, content, user_id)
     return json.dumps(
         {"created_note": {"note_id": str(note.id), "title": note.title or "Untitled"}}
+    )
+
+
+@tool("create_task", args_schema=CreateTaskArgs)
+def create_task(
+    title: str, due_at: str | None, due_has_time: bool, config: RunnableConfig
+) -> str:
+    """Create a task (reminder or to-do) immediately, with an optional due date."""
+    user_id, configurable = _tool_context(config)
+    create = _callback(configurable, "create_task")
+    due: datetime | None = None
+    if due_at:
+        try:
+            due = datetime.fromisoformat(due_at)
+        except ValueError:
+            return json.dumps({"error": "due_at must be an ISO 8601 datetime."})
+        if due.tzinfo is None:
+            zone = configurable.get("timezone")
+            due = due.replace(tzinfo=ZoneInfo(zone) if zone else timezone.utc)
+    task = create(title, due, due_has_time, user_id)
+    return json.dumps(
+        {
+            "created_task": {
+                "task_id": str(task.id),
+                "title": task.title,
+                "due_at": task.due_at.isoformat() if task.due_at else None,
+            }
+        }
     )
 
 
@@ -197,6 +253,7 @@ def resolve_pending_action(decision: str, config: RunnableConfig) -> str:
 _TOOLS = [
     search_notes,
     create_note,
+    create_task,
     propose_update_note,
     propose_archive_note,
     propose_delete_note,
@@ -255,6 +312,8 @@ def _route_after_tools(state: ChatState) -> str:
 
 
 def _system_prompt(configurable: dict[str, Any]) -> str:
+    if configurable.get("capture_prompt"):
+        return configurable["capture_prompt"]
     pending = configurable.get("pending_action")
     if not pending:
         return SYSTEM_PROMPT
@@ -264,12 +323,13 @@ def _system_prompt(configurable: dict[str, Any]) -> str:
     )
 
 
-def _compile_graph():
+def _compile_graph(tools=None):
+    tools = tools or _TOOLS
     model = ChatOpenAI(
         model=config.OPENAI_CHAT_MODEL,
         api_key=config.OPENAI_API_KEY or None,
         streaming=True,
-    ).bind_tools(_TOOLS)
+    ).bind_tools(tools)
     graph = StateGraph(ChatState)
     graph.add_node(
         "model",
@@ -282,7 +342,7 @@ def _compile_graph():
         | model
         | RunnableLambda(lambda response: {"messages": [response]}),
     )
-    graph.add_node("tools", ToolNode(_TOOLS))
+    graph.add_node("tools", ToolNode(tools))
     graph.add_edge(START, "model")
     graph.add_conditional_edges("model", _route_after_model)
     graph.add_conditional_edges("tools", _route_after_tools)
@@ -366,3 +426,55 @@ def stream_chat_graph(
             "resolved": resolved,
         }
     }
+
+
+def run_capture_graph(
+    text: str, now: str, timezone_name: str, configurable: dict[str, Any]
+) -> dict[str, Any]:
+    today = datetime.fromisoformat(now).astimezone(ZoneInfo(timezone_name))
+    upcoming = ", ".join(
+        f"{(today + timedelta(days=n)):%a %Y-%m-%d}" for n in range(1, 15)
+    )
+    prompt = (
+        f"{CAPTURE_PROMPT}\n\nCurrent datetime: {now}. "
+        f"User timezone: {timezone_name}. Today is {today:%A %Y-%m-%d} there. "
+        f"Upcoming dates: {upcoming}. Always copy the date for a weekday or "
+        "relative day from this list, never compute it. Resolve weekdays "
+        "to the next such date "
+        "(a bare weekday is never today; \"next <weekday>\" is the one in the "
+        "following week). "
+        "If no time of day is stated, use date-only due_at (YYYY-MM-DD) and "
+        "due_has_time false."
+    )
+    graph = _compile_graph([t for t in _TOOLS if t is not resolve_pending_action])
+    state = graph.invoke(
+        {"messages": [HumanMessage(text)]},
+        config={
+            "configurable": {
+                **configurable,
+                "capture_prompt": prompt,
+                "timezone": timezone_name,
+            }
+        },
+    )
+    result: dict[str, Any] = {
+        "task_id": None,
+        "note_id": None,
+        "pending_action": None,
+        "message": "",
+    }
+    for message in state["messages"]:
+        name = getattr(message, "name", None)
+        if not isinstance(name, str):
+            continue
+        payload = _tool_payload(message.content)
+        if name == "create_task" and "created_task" in payload:
+            result["task_id"] = payload["created_task"]["task_id"]
+        elif name == "create_note" and "created_note" in payload:
+            result["note_id"] = payload["created_note"]["note_id"]
+        elif name.startswith("propose_") and "pending_action" in payload:
+            result["pending_action"] = payload["pending_action"]
+    last = state["messages"][-1]
+    if isinstance(last, AIMessage):
+        result["message"] = _text_content(last.content)
+    return result

@@ -1,8 +1,9 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class NoteOut(BaseModel):
@@ -84,3 +85,54 @@ class ConfirmRequest(BaseModel):
 class ConfirmResponse(BaseModel):
     message: str
     note: NoteOut
+
+class TaskCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=500)
+    due_at: datetime | None = None
+    due_has_time: bool = False
+
+
+class TaskUpdate(BaseModel):
+    completed: bool
+
+
+class TaskOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title: str
+    due_at: datetime | None
+    due_has_time: bool
+    completed_at: datetime | None
+    created_at: datetime
+
+
+class CaptureRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+    now: datetime
+    timezone: str
+
+    @field_validator("text")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Text must not be empty")
+        return value
+
+    @field_validator("timezone")
+    @classmethod
+    def valid_timezone(cls, value: str) -> str:
+        try:
+            ZoneInfo(value)
+        except Exception as error:
+            raise ValueError("Unknown timezone") from error
+        return value
+
+
+class CaptureResponse(BaseModel):
+    outcome: Literal["task_created", "note_created", "pending_action", "message"]
+    task: TaskOut | None = None
+    note: NoteOut | None = None
+    pending_action: PendingAction | None = None
+    message: str | None = None

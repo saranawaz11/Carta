@@ -6,6 +6,7 @@ import { UserButton } from "@clerk/nextjs";
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 
+import { QuickCapture } from "@/components/quick-capture";
 import { Button } from "@/components/ui/button";
 import { useNoteActions } from "@/lib/notes";
 
@@ -38,10 +39,12 @@ export function Sidebar() {
       <Button type="button" onClick={handleCreateNote}>
         Create Note
       </Button>
+      <QuickCapture />
       <nav aria-label="Notes">
         <ul className="flex gap-4 md:flex-col">
           <li><Link href="/">Notes</Link></li>
           <li><Link href="/ask">Ask AI</Link></li>
+          <li><Link href="/tasks">Tasks</Link></li>
           <li><Link href="/archive">Archive</Link></li>
           <li><Link href="/deleted">Deleted</Link></li>
         </ul>

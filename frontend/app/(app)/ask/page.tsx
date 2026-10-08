@@ -5,19 +5,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSWRConfig } from "swr";
 
+import { ActionCard, type PendingAction } from "@/components/action-card";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { invalidateNotes } from "@/lib/notes";
 
 type Source = { note_id: string; title: string };
 type CreatedNote = { note_id: string; title: string };
-type PendingAction = {
-  action: "update" | "archive" | "delete";
-  note_id: string;
-  note_title: string;
-  expected_updated_at: string;
-  changes: Record<string, string>;
-};
 type Message = {
   role: "user" | "assistant";
   content: string;
@@ -37,12 +31,6 @@ type ConfirmResponse = {
   message: string;
   note: { id: string; title: string };
 };
-
-function actionDescription(action: PendingAction): string {
-  if (action.action === "archive") return "Archive this note?";
-  if (action.action === "delete") return "Move this note to Deleted?";
-  return "Apply these changes?";
-}
 
 export default function AskPage() {
   const { getToken } = useAuth();
@@ -240,46 +228,22 @@ export default function AskPage() {
               </p>
             )}
             {message.pending_action && (
-              <div role="group" aria-label="Confirm note action">
-                <p>
-                  {actionDescription(message.pending_action)}{" "}
-                  <strong>{message.pending_action.note_title}</strong>
-                </p>
-                {Object.entries(message.pending_action.changes).map(
-                  ([field, value]) => (
-                    <p key={field}>
-                      {field === "title" ? "Title" : "Content"}: {value}
-                    </p>
-                  ),
-                )}
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    disabled={confirmingIndex !== null}
-                    onClick={() =>
-                      void confirmAction(message.pending_action!, index)
-                    }
-                  >
-                    Confirm
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={confirmingIndex !== null}
-                    onClick={() =>
-                      setMessages((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, pending_action: null }
-                            : item,
-                        ),
-                      )
-                    }
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
+              <ActionCard
+                action={message.pending_action}
+                disabled={confirmingIndex !== null}
+                onConfirm={() =>
+                  void confirmAction(message.pending_action!, index)
+                }
+                onCancel={() =>
+                  setMessages((current) =>
+                    current.map((item, itemIndex) =>
+                      itemIndex === index
+                        ? { ...item, pending_action: null }
+                        : item,
+                    ),
+                  )
+                }
+              />
             )}
           </li>
         ))}

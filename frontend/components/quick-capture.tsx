@@ -17,6 +17,7 @@ import {
 import { apiFetch } from "@/lib/api";
 import { invalidateNotes, type Note } from "@/lib/notes";
 import { formatDue, invalidateTasks, type Task } from "@/lib/tasks";
+import { PlusIcon } from "lucide-react";
 
 type CaptureResponse = {
   outcome: "task_created" | "note_created" | "pending_action" | "message";
@@ -101,7 +102,8 @@ export function QuickCapture() {
         }
       }}
     >
-      <DialogTrigger render={<Button type="button" variant="outline" />}>
+      <DialogTrigger render={<Button type="button" variant="outline" className='w-full bg-red-900 py-5 rounded-full text-white hover:bg-red-800' />}>
+      <PlusIcon size={18} className="" />
         Quick Capture
       </DialogTrigger>
       <DialogContent>

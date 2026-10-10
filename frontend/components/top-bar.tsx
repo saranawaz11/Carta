@@ -10,7 +10,7 @@ function placeholderFor(pathname: string) {
   return "Search notes";
 }
 
-export function TopBar() {
+export function TopBar({ standalone = false }: { standalone?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -34,7 +34,12 @@ export function TopBar() {
   }, [value, urlQuery, params, pathname, router]);
 
   return (
-    <div className="sticky top-14 z-20 flex h-14 shrink-0 items-center border-b border-red-100 bg-white/80 px-4 backdrop-blur sm:px-6 md:static">
+    <div
+      className={`sticky z-20 flex h-14 shrink-0 items-center border-b border-red-100 bg-white/80 px-4 backdrop-blur sm:px-6 md:static ${
+        standalone ? "top-0" : "top-14"
+      }`}
+    >
+      {" "}
       <label className="group relative block w-full max-w-xl">
         <span className="sr-only">{placeholderFor(pathname)}</span>
         <Search

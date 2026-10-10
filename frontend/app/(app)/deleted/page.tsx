@@ -1,5 +1,6 @@
-import { NoteList } from "@/components/note-list";
+// app/(app)/deleted/page.tsx
+import { VaultList } from "@/components/vault-list";
 
 export default function DeletedPage() {
-  return <NoteList status="deleted" />;
+  return <VaultList status="deleted" />;
 }

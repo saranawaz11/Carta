@@ -1,20 +1,11 @@
-import { type ReactNode, Suspense } from "react";
+import type { ReactNode } from "react";
+import { auth } from "@clerk/nextjs/server";
 
-import { Sidebar } from "@/components/sidebar";
-import { TopBar } from "@/components/top-bar";
+import { AppShell } from "@/components/app-shell";
+import { LandingPage } from "@/components/home-page-components/landing-page";
 
-export default function AppLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-dvh flex-col md:h-dvh md:flex-row md:overflow-hidden">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col bg-red-50/40 md:overflow-hidden">
-        <Suspense fallback={<div className="h-14 border-b border-red-100" />}>
-          <TopBar />
-        </Suspense>
-        <main className="min-w-0 flex-1 p-4 sm:p-6 md:overflow-y-auto">
-          <Suspense fallback={null}>{children}</Suspense>
-        </main>
-      </div>
-    </div>
-  );
+export default async function AppLayout({ children }: { children: ReactNode }) {
+  const { userId } = await auth();
+  if (!userId) return <LandingPage />;
+  return <AppShell>{children}</AppShell>;
 }

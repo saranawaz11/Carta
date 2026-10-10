@@ -1,5 +1,6 @@
-import { NoteList } from "@/components/note-list";
+// app/(app)/archive/page.tsx
+import { VaultList } from "@/components/vault-list";
 
 export default function ArchivePage() {
-  return <NoteList status="archived" />;
+  return <VaultList status="archived" />;
 }

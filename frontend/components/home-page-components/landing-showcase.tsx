@@ -238,13 +238,13 @@ export function LandingShowcase() {
         exit: { height: 0, opacity: 0 },
       };
 
-  const eyebrow = "font-mono text-[10px] uppercase tracking-[0.2em] text-red-800";
+  const eyebrow = "font-mono text-[10px] uppercase tracking-[0.2em] text-brand";
 
   return (
     <section
       ref={root}
       id="inside"
-      className="relative scroll-mt-8 border-t border-red-900/10 bg-[#fff6f3] text-[#1f1a1a]"
+      className="relative scroll-mt-8 border-t border-line bg-page text-ink"
     >
       <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-16 sm:px-6 sm:pt-24">
         {/* Heading */}
@@ -277,13 +277,13 @@ export function LandingShowcase() {
         <div className="mt-12 [perspective:1400px]">
           <div
             data-frame
-            className="overflow-hidden rounded-2xl border border-red-900/10 bg-[#fffaf8] shadow-2xl shadow-red-900/10 will-change-transform"
+            className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl shadow-red-900/10 will-change-transform"
           >
             {/* Window bar */}
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-red-900/10 bg-[#f6ebe7] px-4 py-2.5">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-line bg-chrome px-4 py-2.5">
               <div className="flex gap-1.5" aria-hidden="true">
                 {[0, 1, 2].map((i) => (
-                  <span key={i} className="size-2 rounded-full bg-red-900/15" />
+                  <span key={i} className="size-2 rounded-full bg-line-strong" />
                 ))}
               </div>
               <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-gray-500">
@@ -296,7 +296,7 @@ export function LandingShowcase() {
 
             <div className="flex flex-col md:h-[540px] md:flex-row">
               {/* Notes list (scrolls on its own) */}
-              <div className="flex min-h-0 flex-col border-b border-red-900/10 md:w-[260px] md:shrink-0 md:border-b-0 md:border-r">
+              <div className="flex min-h-0 flex-col border-b border-line md:w-[260px] md:shrink-0 md:border-b-0 md:border-r">
                 <div className="px-4 pb-3 pt-5">
                   <div className="flex items-baseline justify-between">
                     <h3 className={`${display.className} text-xl font-normal`}>Your notes</h3>
@@ -304,7 +304,7 @@ export function LandingShowcase() {
                       {visible.length} {visible.length === 1 ? "note" : "notes"}
                     </span>
                   </div>
-                  <label className="mt-3 flex items-center gap-2 rounded-full border border-red-900/10 bg-white px-3 py-2 transition-[border-color,box-shadow] duration-300 focus-within:border-red-300 focus-within:ring-4 focus-within:ring-red-100">
+                  <label className="mt-3 flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-2 transition-[border-color,box-shadow] duration-300 focus-within:border-red-300 focus-within:ring-4 focus-within:ring-red-100">
                     <Search size={13} className="shrink-0 text-gray-400" />
                     <span className="sr-only">Search title or content</span>
                     <input
@@ -316,7 +316,7 @@ export function LandingShowcase() {
                   </label>
                 </div>
 
-                <ul className="max-h-64 min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-4 [scrollbar-color:#e7c4bb_transparent] [scrollbar-width:thin] md:max-h-none">
+                <ul className="max-h-64 min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-4 [scrollbar-color:var(--carta-scroll)_transparent] [scrollbar-width:thin] md:max-h-none">
                   {visible.length === 0 && (
                     <li className="px-2 py-8 text-center text-xs text-gray-500">No notes match.</li>
                   )}
@@ -336,8 +336,8 @@ export function LandingShowcase() {
                           aria-current={selected ? "true" : undefined}
                           className={`block w-full rounded-xl border p-3.5 text-left transition-[background-color,border-color,transform,box-shadow] duration-300 ease-out ${
                             selected
-                              ? "border-[#f0c9c0] bg-[#fbe6e1] shadow-sm"
-                              : "border-red-900/10 bg-white hover:-translate-y-0.5 hover:border-red-300 hover:shadow-md hover:shadow-red-900/5"
+                              ? "border-tint-edge bg-tint shadow-sm"
+                              : "border-line bg-panel hover:-translate-y-0.5 hover:border-red-300 hover:shadow-md hover:shadow-red-900/5"
                           }`}
                         >
                           <span className={`${display.className} block text-[15px] leading-snug`}>
@@ -356,9 +356,9 @@ export function LandingShowcase() {
 
               {/* Editor */}
               <div className="flex min-w-0 flex-1 flex-col md:min-h-0">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-red-900/10 px-5 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
                   <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
-                    <Check size={12} className="text-red-800" />
+                    <Check size={12} className="text-brand" />
                     All changes saved
                   </span>
                   <div className="flex items-center gap-2">
@@ -369,7 +369,7 @@ export function LandingShowcase() {
                       className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3.5 text-[11px] font-medium transition-[background-color,border-color,color,transform] duration-300 active:scale-95 ${
                         summaryOpen
                           ? "border-red-800 bg-red-800 text-white hover:bg-red-900"
-                          : "border-red-900/15 bg-white text-gray-700 hover:border-red-300 hover:text-red-800"
+                          : "border-line-strong bg-panel text-gray-700 hover:border-red-300 hover:text-brand"
                       }`}
                     >
                       <Sparkles size={12} />
@@ -378,7 +378,7 @@ export function LandingShowcase() {
                     <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}>
                       <Link
                         href="/sign-up"
-                        className="inline-flex h-8 items-center gap-1.5 rounded-full bg-red-800 px-3.5 text-[11px] font-medium text-white transition-colors duration-300 hover:bg-red-900"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[var(--carta-button)] px-3.5 text-[11px] font-medium text-white transition-colors duration-300 hover:bg-[var(--carta-button-hover)]"
                       >
                         <Plus size={12} />
                         Inscribe Note
@@ -431,7 +431,7 @@ export function LandingShowcase() {
                     {...asideMotion}
                     transition={reduce ? { duration: 0 } : { duration: 0.55, ease }}
                     aria-label="Note summary"
-                    className="shrink-0 overflow-hidden border-t border-red-900/10 bg-white md:border-l md:border-t-0"
+                    className="shrink-0 overflow-hidden border-t border-line bg-panel md:border-l md:border-t-0"
                   >
                     <div className="w-full p-5 md:h-full md:w-[272px] md:overflow-y-auto">
                       <div className="flex items-center gap-2">
@@ -459,7 +459,7 @@ export function LandingShowcase() {
                             <ol className="mt-2.5 space-y-2.5">
                               {active.points.map((point, i) => (
                                 <li key={point} className="flex gap-2.5 text-xs text-gray-700">
-                                  <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-red-100 text-[9px] font-semibold text-red-800">
+                                  <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-red-100 text-[9px] font-semibold text-brand">
                                     {i + 1}
                                   </span>
                                   {point}
@@ -481,7 +481,7 @@ export function LandingShowcase() {
                                     <button
                                       type="button"
                                       onClick={() => setActiveId(id)}
-                                      className="block w-full rounded-lg border border-red-900/10 p-2.5 text-left transition-[border-color,background-color,transform] duration-300 hover:-translate-y-0.5 hover:border-red-300 hover:bg-red-50"
+                                      className="block w-full rounded-lg border border-line p-2.5 text-left transition-[border-color,background-color,transform] duration-300 hover:-translate-y-0.5 hover:border-red-300 hover:bg-red-50"
                                     >
                                       <span className="block truncate text-xs font-medium">{linked.title}</span>
                                     </button>
@@ -501,16 +501,16 @@ export function LandingShowcase() {
         </div>
 
         {/* Ask Carta */}
-        <Reveal y={24} className="mt-8">
+        <Reveal y={24} className="mt-18">
           <div
             id="ask"
-            className="flex scroll-mt-8 items-start gap-4 rounded-2xl border border-red-900/10 bg-white p-5 shadow-sm"
+            className="flex scroll-mt-8 items-start gap-4 rounded-2xl border border-line bg-panel p-5 shadow-sm"
           >
             <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-red-800 text-white">
               <Sparkles size={14} />
             </span>
             <div className="min-w-0">
-              <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-red-800">Ask Carta</p>
+              <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-brand">Ask Carta</p>
               <p className={`${display.className} mt-1.5 text-lg`}>What did I write about slower days?</p>
               <p className="mt-2 text-xs leading-relaxed text-gray-600">
                 It came up in two notes: &ldquo;A slower Sunday&rdquo; and &ldquo;Small plans for
@@ -524,7 +524,7 @@ export function LandingShowcase() {
           <p className="text-[11px] text-gray-500">
             A note doesn&apos;t have to be important yet. It just needs somewhere to begin.
           </p>
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-red-800">
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand">
             01 / Your notes, in view
           </span>
         </div>

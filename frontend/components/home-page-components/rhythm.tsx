@@ -103,7 +103,7 @@ function Step({ step, index }: { step: (typeof STEPS)[number]; index: number }) 
       transition={{ duration: 0.9, delay: index * 0.14, ease }}
     >
       <div className="flex items-center gap-4">
-        <span className="font-mono text-[10px] text-red-800">{step.n}</span>
+        <span className="font-mono text-[10px] text-brand">{step.n}</span>
         <span data-line className="h-px flex-1 origin-left bg-red-900/20" />
       </div>
       <h3 className={`${display.className} mt-6 text-2xl font-normal leading-snug`}>{step.title}</h3>
@@ -111,7 +111,7 @@ function Step({ step, index }: { step: (typeof STEPS)[number]; index: number }) 
 
       <motion.div
         whileHover={{ y: -3, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-        className="mt-6 rounded-xl border border-red-900/10 bg-white p-4 shadow-sm shadow-red-900/5"
+        className="mt-6 rounded-xl border border-line bg-panel p-4 shadow-sm shadow-red-900/5"
       >
         <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-gray-500">{step.label}</p>
         <p className="mt-2.5 flex items-center gap-2.5 text-xs text-gray-800">
@@ -119,7 +119,7 @@ function Step({ step, index }: { step: (typeof STEPS)[number]; index: number }) 
             initial={reduce ? false : { scale: 0, rotate: -40 }}
             animate={inView ? { scale: 1, rotate: 0 } : undefined}
             transition={{ type: "spring", stiffness: 320, damping: 15, delay: 0.5 + index * 0.15 }}
-            className="shrink-0 text-red-800"
+            className="shrink-0 text-brand"
           >
             <Icon size={14} />
           </motion.span>
@@ -175,11 +175,11 @@ export function Rhythm() {
   );
 
   return (
-    <section ref={root} id="rhythm" className="scroll-mt-8 border-y border-red-900/10 bg-[#f6efe9] text-[#1f1a1a]">
+    <section ref={root} id="rhythm" className="scroll-mt-8 border-y border-line bg-sand text-ink">
       <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div data-head className="grid gap-4 md:grid-cols-[1.5fr_1fr] md:items-end">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-red-800">
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-brand">
               From fleeting to found
             </p>
             <h2

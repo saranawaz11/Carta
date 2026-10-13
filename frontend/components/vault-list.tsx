@@ -298,7 +298,7 @@ export function VaultList({ status }: { status: VaultStatus }) {
         {/* Tabs: identical on both routes */}
         <nav
           aria-label="Archive and Trash"
-          className="inline-flex w-fit rounded-full border border-red-100 bg-white p-1 shadow-sm"
+          className="inline-flex w-fit rounded-full border border-red-100 bg-panel p-1 shadow-sm"
         >
           {tabs.map(({ status: tabStatus, href, label, icon: Icon, count: tabCount }) => {
             const active = tabStatus === status;
@@ -318,7 +318,7 @@ export function VaultList({ status }: { status: VaultStatus }) {
                 {tabCount !== undefined && (
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${
-                      active ? "bg-white/20 text-white" : "bg-red-100 text-red-700"
+                      active ? "bg-panel/20 text-white" : "bg-red-100 text-red-700"
                     }`}
                   >
                     {tabCount}
@@ -331,7 +331,7 @@ export function VaultList({ status }: { status: VaultStatus }) {
       </header>
 
       {/* Policy line */}
-      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-100 bg-white/70 px-4 py-3 text-sm text-gray-600 motion-safe:animate-fade-up">
+      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-100 bg-panel/70 px-4 py-3 text-sm text-gray-600 motion-safe:animate-fade-up">
         {status === "archived" ? (
           <Info size={16} className="mt-0.5 shrink-0 text-red-600" />
         ) : (
@@ -346,7 +346,7 @@ export function VaultList({ status }: { status: VaultStatus }) {
       </div>
 
       {/* Toolbar */}
-      <div className="mb-3 flex flex-wrap items-center gap-1 rounded-2xl border border-red-100 bg-white p-1.5 shadow-sm">
+      <div className="mb-3 flex flex-wrap items-center gap-1 rounded-2xl border border-red-100 bg-panel p-1.5 shadow-sm">
         <label className={`${btnBase} ${btnIdle} cursor-pointer select-none`}>
           <input
             ref={selectAllRef}
@@ -419,7 +419,7 @@ export function VaultList({ status }: { status: VaultStatus }) {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="h-9 cursor-pointer appearance-none rounded-full border border-red-100 bg-white pl-4 pr-9 text-sm font-medium text-gray-700 outline-none
+            className="h-9 cursor-pointer appearance-none rounded-full border border-red-100 bg-panel pl-4 pr-9 text-sm font-medium text-gray-700 outline-none
               transition-[border-color,box-shadow] duration-200 hover:border-red-300 focus:border-red-300 focus:ring-4 focus:ring-red-100"
           >
             {SORTS.map((s) => (
@@ -476,7 +476,7 @@ export function VaultList({ status }: { status: VaultStatus }) {
               <li
                 key={note.id}
                 style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
-                className={`group flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-white shadow-sm
+                className={`group flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-panel shadow-sm
                   transition-[transform,box-shadow,border-color,background-color,opacity] duration-300 ease-out motion-safe:animate-fade-up
                   hover:-translate-y-0.5 hover:shadow-lg hover:shadow-red-100/60
                   ${

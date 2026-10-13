@@ -36,6 +36,8 @@ const STAMENS: [number, number][] = [
   [1.39, -4.28],
   [3.64, -2.65],
 ];
+
+// Drawing colours come from tokens in globals.css (art-*), so they follow light and dark mode.
 function Stitched() {
   return (
     <svg
@@ -44,8 +46,8 @@ function Stitched() {
       className="size-full"
       aria-hidden="true"
     >
-      <rect width="250" height="200" fill="#efe3dc" />
-      <rect x="14" y="14" width="222" height="172" rx="8" fill="#f6ece6" />
+      <rect width="250" height="200" className="fill-art-ground" />
+      <rect x="14" y="14" width="222" height="172" rx="8" className="fill-art-paper" />
       <rect
         x="22"
         y="22"
@@ -53,7 +55,7 @@ function Stitched() {
         height="156"
         rx="6"
         fill="none"
-        stroke="#d9bfb5"
+        className="stroke-art-stitch"
         strokeWidth="1.5"
         strokeDasharray="3 4"
       />
@@ -61,28 +63,28 @@ function Stitched() {
       <path
         d="M150 104 C140 132 118 152 92 178"
         fill="none"
-        stroke="#3d2a22"
+        className="stroke-art-stem"
         strokeWidth="2"
         strokeLinecap="round"
       />
       <path
         d="M128 140 C118 134 106 136 98 144"
         fill="none"
-        stroke="#3d2a22"
+        className="stroke-art-stem"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
       <path
         d="M138 120 C150 118 160 124 166 134"
         fill="none"
-        stroke="#3d2a22"
+        className="stroke-art-stem"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
       <path
         d="M112 160 C104 158 96 160 90 166"
         fill="none"
-        stroke="#3d2a22"
+        className="stroke-art-stem"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
@@ -95,7 +97,7 @@ function Stitched() {
             cy="-22"
             rx="11"
             ry="22"
-            fill="#a3262f"
+            className="fill-art-petal"
             transform={`rotate(${i * 45})`}
           />
         ))}
@@ -106,7 +108,7 @@ function Stitched() {
             cy="-16"
             rx="5"
             ry="13"
-            fill="#bd3640"
+            className="fill-art-petal-inner"
             transform={`rotate(${i * 45 + 22.5})`}
           />
         ))}
@@ -173,7 +175,7 @@ export function Manifesto() {
   return (
     <section
       ref={root}
-      className="border-y border-red-900/10 bg-[#f6efe9] text-[#1f1a1a]"
+      className="border-y border-line bg-sand text-ink"
     >
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-24 md:grid-cols-[230px_1fr] md:gap-16">
         {/* Left: label, picture, caption */}
@@ -183,7 +185,7 @@ export function Manifesto() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.8, ease }}
-            className="font-mono text-[10px] uppercase tracking-[0.2em] text-red-800"
+            className="font-mono text-[10px] uppercase tracking-[0.2em] text-brand"
           >
             A small manifesto
           </motion.p>
@@ -193,7 +195,7 @@ export function Manifesto() {
             whileInView={{ clipPath: "inset(0% 0% 0% 0%)" }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 1.3, delay: 0.1, ease }}
-            className="mt-6 aspect-[5/4] w-full max-w-[230px] overflow-hidden rounded-xl border border-red-900/10 bg-[#efe3dc]"
+            className="mt-6 aspect-[5/4] w-full max-w-[230px] overflow-hidden rounded-xl border border-line bg-art-ground"
           >
             <div data-img className="size-full will-change-transform">
               {MANIFESTO_IMAGE ? (
@@ -215,7 +217,7 @@ export function Manifesto() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.9, delay: 0.6, ease }}
-            className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-red-800"
+            className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-brand"
           >
             Keep what moves you.
           </motion.p>

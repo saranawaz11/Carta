@@ -126,7 +126,7 @@ export function Ask() {
   );
 
   return (
-    <section ref={root} id="ask" data-cursor-light className="scroll-mt-8 bg-[#7a1c28] text-[#fff1ee]">
+    <section ref={root} id="ask" data-cursor-light className="scroll-mt-8 bg-[var(--carta-wine)] text-[var(--carta-wine-ink)]">
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-2 lg:gap-20">
         {/* Example conversation */}
         <div data-card className="order-2 will-change-transform lg:order-1">
@@ -136,11 +136,11 @@ export function Ask() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 1.1, ease }}
-            className="rounded-[1.75rem] bg-[#fffaf6] p-5 text-[#1f1a1a] shadow-2xl shadow-black/30 sm:p-7"
+            className="rounded-[1.75rem] bg-[var(--carta-ivory)] p-5 text-ink shadow-2xl shadow-black/30 sm:p-7"
           >
-            <div className="flex items-center justify-between gap-3 border-b border-red-900/10 pb-4">
+            <div className="flex items-center justify-between gap-3 border-b border-line pb-4">
               <p className={`${display.className} flex items-center gap-2 text-2xl font-normal`}>
-                <Sparkles size={18} className="text-red-800" />
+                <Sparkles size={18} className="text-brand" />
                 Ask Carta AI
               </p>
               <span className="font-mono text-[8px] uppercase tracking-[0.18em] text-gray-500">
@@ -156,9 +156,9 @@ export function Ask() {
                     initial={reduce ? false : { opacity: 0, y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, ease }}
-                    className="rounded-xl bg-[#f9e6e1] p-4"
+                    className="rounded-xl bg-[var(--carta-blush-soft)] p-4"
                   >
-                    <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-red-800">You</p>
+                    <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-brand">You</p>
                     <p className="mt-1.5 text-xs leading-relaxed">{QUESTION}</p>
                   </motion.div>
                 )}
@@ -167,7 +167,7 @@ export function Ask() {
               {/* Carta */}
               {phase >= 2 && (
                 <div>
-                  <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-red-800">Carta</p>
+                  <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-brand">Carta</p>
 
                   {phase === 2 && (
                     <div className="mt-3 flex gap-1.5" role="status">
@@ -214,7 +214,7 @@ export function Ask() {
                           initial={reduce ? false : { opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ type: "spring", stiffness: 300, damping: 18, delay: 0.1 + i * 0.12 }}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-red-900/15 bg-white px-3 py-1 text-[10px] text-red-900"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-panel px-3 py-1 text-[10px] text-brand-strong"
                         >
                           <FileText size={10} />
                           {source}
@@ -222,12 +222,12 @@ export function Ask() {
                       ))}
                     </div>
 
-                    <div className="rounded-xl border border-red-900/10 bg-white p-4">
+                    <div className="rounded-xl border border-line bg-panel p-4">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-[11px] font-medium">
                           {decision === "confirmed" ? "Applied" : "Proposed update"} · A slower Sunday
                         </p>
-                        <span className="font-mono text-[8px] uppercase tracking-[0.18em] text-red-800">
+                        <span className="font-mono text-[8px] uppercase tracking-[0.18em] text-brand">
                           {decision === null ? "Waiting on you" : decision === "confirmed" ? "Updated" : "No change"}
                         </span>
                       </div>
@@ -240,7 +240,7 @@ export function Ask() {
                               decision === "kept" ? "text-gray-400 line-through" : "text-gray-700"
                             }`}
                           >
-                            <Plus size={11} className="mt-0.5 shrink-0 text-red-800" />
+                            <Plus size={11} className="mt-0.5 shrink-0 text-brand" />
                             {change}
                           </li>
                         ))}
@@ -260,14 +260,14 @@ export function Ask() {
                                 onClick={() => setDecision("confirmed")}
                                 whileHover={{ y: -2 }}
                                 whileTap={{ scale: 0.95 }}
-                                className="inline-flex h-8 items-center rounded-full bg-red-800 px-4 text-[11px] font-medium text-white transition-colors duration-300 hover:bg-red-900"
+                                className="inline-flex h-8 items-center rounded-full bg-[var(--carta-button)] px-4 text-[11px] font-medium text-white transition-colors duration-300 hover:bg-[var(--carta-button-hover)]"
                               >
                                 Confirm update
                               </motion.button>
                               <button
                                 type="button"
                                 onClick={() => setDecision("kept")}
-                                className="text-[11px] text-gray-600 transition-colors duration-300 hover:text-red-800"
+                                className="text-[11px] text-gray-600 transition-colors duration-300 hover:text-brand"
                               >
                                 Keep as is
                               </button>
@@ -281,7 +281,7 @@ export function Ask() {
                               className="flex flex-wrap items-center gap-4"
                             >
                               <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-700">
-                                <Check size={12} className="text-red-800" />
+                                <Check size={12} className="text-brand" />
                                 {decision === "confirmed"
                                   ? "Done. Your note was updated."
                                   : "Kept as is. Nothing was changed."}
@@ -289,7 +289,7 @@ export function Ask() {
                               <button
                                 type="button"
                                 onClick={() => setRunId((r) => r + 1)}
-                                className="inline-flex items-center gap-1 text-[11px] text-red-800 transition-opacity duration-300 hover:opacity-70"
+                                className="inline-flex items-center gap-1 text-[11px] text-brand transition-opacity duration-300 hover:opacity-70"
                               >
                                 <RotateCcw size={11} />
                                 Replay

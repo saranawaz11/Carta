@@ -5,7 +5,7 @@ import { Reveal } from "@/components/home-page-components/reveal";
 
 const display = Fraunces({ subsets: ["latin"], display: "swap", axes: ["opsz"] });
 
-const eyebrow = "font-mono text-[10px] uppercase tracking-[0.2em] text-red-800";
+const eyebrow = "font-mono text-[10px] uppercase tracking-[0.2em] text-brand";
 
 const CARDS = [
   {
@@ -47,7 +47,7 @@ export function MoveForward() {
   return (
     <section
       id="move-forward"
-      className="scroll-mt-8 border-t border-red-900/10 bg-[#fff1ee] text-[#1f1a1a]"
+      className="scroll-mt-8 border-t border-line bg-band text-ink"
     >
       <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="grid items-end gap-8 md:grid-cols-[1.4fr_1fr]">
@@ -75,17 +75,17 @@ export function MoveForward() {
               key={title}
               delay={i * 0.08}
               lift
-              className="rounded-2xl border border-red-900/10 bg-[#fffaf8] p-5 transition-[box-shadow,border-color] duration-300 hover:border-red-300 hover:shadow-lg hover:shadow-red-900/5"
+              className="rounded-2xl border border-line bg-surface p-5 transition-[box-shadow,border-color] duration-300 hover:border-red-300 hover:shadow-lg hover:shadow-red-900/5"
             >
               <div className="flex items-start gap-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-800">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-brand">
                   <Icon size={14} aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
                   <h3 className={`${display.className} text-xl font-normal leading-snug tracking-tight`}>
                     {title}
                   </h3>
-                  <p className="mt-1 font-mono text-[8px] uppercase tracking-[0.18em] text-red-800">
+                  <p className="mt-1 font-mono text-[8px] uppercase tracking-[0.18em] text-brand">
                     {tag}
                   </p>
                 </div>
@@ -98,7 +98,7 @@ export function MoveForward() {
                   <li
                     key={point}
                     className={`flex gap-2.5 text-[11px] leading-relaxed text-gray-700 ${
-                      boxed ? "rounded-lg border border-red-900/10 bg-white px-3 py-2.5" : "px-1"
+                      boxed ? "rounded-lg border border-line bg-panel px-3 py-2.5" : "px-1"
                     }`}
                   >
                     <span

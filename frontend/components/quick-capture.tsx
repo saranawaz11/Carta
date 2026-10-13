@@ -51,7 +51,7 @@ function Notice({
 }) {
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-3.5 motion-safe:animate-fade-up">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-red-600">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-panel text-red-600">
         <Icon size={16} />
       </span>
       <div className="min-w-0 flex-1 text-sm">
@@ -170,7 +170,7 @@ export function QuickCapture() {
           className="flex flex-col gap-4 pt-5"
         >
           <div className="px-5">
-            <div className="rounded-2xl border border-red-100 bg-white transition-[border-color,box-shadow] duration-200 focus-within:border-red-300 focus-within:ring-4 focus-within:ring-red-100">
+            <div className="rounded-2xl border border-red-100 bg-panel transition-[border-color,box-shadow] duration-200 focus-within:border-red-300 focus-within:ring-4 focus-within:ring-red-100">
               <textarea
                 autoFocus
                 value={text}
@@ -230,7 +230,7 @@ export function QuickCapture() {
                   <Link
                     href="/tasks"
                     onClick={() => setOpen(false)}
-                    className="mt-1 inline-flex items-center gap-1 font-medium text-red-700 transition-colors hover:text-red-800"
+                    className="mt-1 inline-flex items-center gap-1 font-medium text-red-700 transition-colors hover:text-brand"
                   >
                     View tasks <ArrowUpRight size={13} />
                   </Link>
@@ -241,7 +241,7 @@ export function QuickCapture() {
                   <Link
                     href={`/notes/${result.note.id}`}
                     onClick={() => setOpen(false)}
-                    className="inline-flex items-center gap-1 font-medium text-red-700 transition-colors hover:text-red-800"
+                    className="inline-flex items-center gap-1 font-medium text-red-700 transition-colors hover:text-brand"
                   >
                     {result.note.title || "Untitled"} <ArrowUpRight size={13} />
                   </Link>

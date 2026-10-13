@@ -4,8 +4,8 @@ import { ArrowUp } from "lucide-react";
 
 const display = Fraunces({ subsets: ["latin"], display: "swap", axes: ["opsz"] });
 
-const heading = "font-mono text-[9px] uppercase tracking-[0.18em] text-red-800";
-const linkClass = "text-[11px] text-gray-700 transition-colors duration-300 hover:text-red-800";
+const heading = "font-mono text-[9px] uppercase tracking-[0.18em] text-brand";
+const linkClass = "text-[11px] text-gray-700 transition-colors duration-300 hover:text-brand";
 
 // Same-page anchors. Match these to the ids on your sections.
 const EXPLORE = [
@@ -17,12 +17,12 @@ const EXPLORE = [
 
 export function SiteFooter() {
   return (
-    <footer className="bg-[#fff6f3] text-[#1f1a1a]">
-      <div className="mx-auto w-full max-w-6xl px-4 pb-8 pt-16 sm:px-6 sm:pt-20">
+    <footer className="bg-page text-ink">
+      <div className="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 sm:px-6 sm:pt-20">
         <div className="flex flex-col gap-12 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className={`${display.className} text-7xl font-normal leading-none tracking-tight text-red-800 sm:text-8xl`}>
-              carta.
+            <p className={`${display.className} text-7xl font-normal leading-none tracking-tight text-brand sm:text-8xl`}>
+              Carta.
             </p>
             <p className="mt-5 text-[11px] text-gray-600">A little space. A lot of possibility.</p>
           </div>
@@ -55,7 +55,7 @@ export function SiteFooter() {
                   </Link>
                 </li>
                 <li>
-                  <a href="#top" className="inline-flex items-center gap-1.5 text-[11px] text-red-800 transition-colors duration-300 hover:text-red-900">
+                  <a href="#top" className="inline-flex items-center gap-1.5 text-[11px] text-brand transition-colors duration-300 hover:text-brand-strong">
                     Back to the beginning
                     <ArrowUp size={11} aria-hidden="true" />
                   </a>
@@ -65,7 +65,7 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-red-900/10 pt-5">
+        <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
           <p className="text-[10px] text-gray-500">© {new Date().getFullYear()} Carta</p>
           <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-gray-500">
             For the thoughts that make you, you.

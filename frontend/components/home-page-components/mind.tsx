@@ -173,10 +173,10 @@ export function Mind() {
     document.getElementById(`mind-tab-${next.id}`)?.focus();
   }
 
-  const eyebrow = "font-mono text-[10px] uppercase tracking-[0.2em] text-red-800";
+  const eyebrow = "font-mono text-[10px] uppercase tracking-[0.2em] text-brand";
 
   return (
-    <section ref={root} id="mind" className="mx-auto w-full max-w-6xl scroll-mt-8 px-4 py-20 sm:px-6 sm:py-28">
+    <section ref={root} id="mind" className="mx-auto w-full max-w-6xl scroll-mt-8 px-4 py-10 sm:px-6 sm:py-20">
       {/* Heading */}
       <div className="grid gap-6 md:grid-cols-[1.4fr_1fr] md:items-end">
         <div data-head>
@@ -236,13 +236,13 @@ export function Mind() {
               onClick={() => setActiveId(c.id)}
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.96 }}
-              className="relative inline-flex h-11 items-center rounded-full border border-red-900/15 bg-white px-5 text-xs font-medium"
+              className="relative inline-flex h-11 items-center rounded-full border border-line-strong bg-panel px-5 text-xs font-medium"
             >
               {on && (
                 <motion.span
                   layoutId="mind-pill"
                   transition={{ type: "spring", stiffness: 380, damping: 34 }}
-                  className="absolute -inset-px rounded-full bg-red-800"
+                  className="absolute -inset-px rounded-full bg-[var(--carta-button)]"
                 />
               )}
               <span
@@ -265,7 +265,7 @@ export function Mind() {
         id="mind-panel"
         role="tabpanel"
         aria-labelledby={`mind-tab-${active.id}`}
-        className="mt-8 rounded-3xl border border-red-900/5 bg-[#f9e7e2] p-5 sm:p-8"
+        className="mt-8 rounded-3xl border border-red-900/5 bg-[var(--carta-blush)] p-5 sm:p-8"
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -282,7 +282,7 @@ export function Mind() {
                 <h3 className={`${display.className} max-w-md text-2xl font-normal leading-tight sm:text-3xl`}>
                   {active.headline}
                 </h3>
-                <span className="rounded-full bg-[#f3d3cb] px-3 py-1 text-[10px] text-red-900">
+                <span className="rounded-full bg-[var(--carta-blush-deep)] px-3 py-1 text-[10px] text-brand-strong">
                   {active.label}
                 </span>
               </motion.div>
@@ -293,9 +293,9 @@ export function Mind() {
                     key={note.title}
                     variants={item}
                     whileHover={{ y: -4, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-                    className="flex flex-col rounded-2xl bg-white p-5 shadow-sm shadow-red-900/5"
+                    className="flex flex-col rounded-2xl bg-panel p-5 shadow-sm shadow-red-900/5"
                   >
-                    <PenLine size={14} className="text-red-800" />
+                    <PenLine size={14} className="text-brand" />
                     <h4 className={`${display.className} mt-4 text-xl font-normal leading-snug`}>
                       {note.title}
                     </h4>
@@ -314,7 +314,7 @@ export function Mind() {
               </motion.p>
               <motion.p
                 variants={item}
-                className={`${display.className} mt-4 text-2xl font-normal leading-snug text-red-800 sm:text-[1.7rem]`}
+                className={`${display.className} mt-4 text-2xl font-normal leading-snug text-brand sm:text-[1.7rem]`}
               >
                 &ldquo;{active.prompt}&rdquo;
               </motion.p>
@@ -323,10 +323,10 @@ export function Mind() {
               </motion.p>
               <motion.div
                 variants={item}
-                className="mt-6 rounded-xl border border-red-900/5 bg-[#fffaf7] p-4 lg:mt-auto"
+                className="mt-6 rounded-xl border border-red-900/5 bg-[var(--carta-cream)] p-4 lg:mt-auto"
               >
                 <p className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.18em] text-gray-500">
-                  <Sparkles size={11} className="text-red-800" />
+                  <Sparkles size={11} className="text-brand" />
                   Or ask Carta AI
                 </p>
                 <p className="mt-2 text-xs leading-relaxed text-gray-800">{active.ask}</p>
@@ -344,7 +344,7 @@ export function Mind() {
           initial={reduce ? false : "hidden"}
           animate="show"
           exit={reduce ? undefined : { opacity: 0, transition: { duration: 0.2 } }}
-          className="mt-4 grid gap-4 md:grid-cols-2"
+          className="mt-10 grid gap-4 md:grid-cols-2"
         >
           {others.map((c) => {
             const Icon = c.icon;
@@ -356,9 +356,9 @@ export function Mind() {
                 onClick={() => setActiveId(c.id)}
                 whileHover={{ y: -4, transition: { type: "spring", stiffness: 300, damping: 20 } }}
                 whileTap={{ scale: 0.99 }}
-                className="rounded-2xl border border-red-900/10 bg-white/60 p-5 text-left transition-[background-color,border-color,box-shadow] duration-300 hover:border-red-300 hover:bg-white hover:shadow-lg hover:shadow-red-900/5"
+                className="rounded-2xl border border-line bg-panel/60 p-5 text-left transition-[background-color,border-color,box-shadow] duration-300 hover:border-red-300 hover:bg-panel hover:shadow-lg hover:shadow-red-900/5"
               >
-                <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-red-800">
+                <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-brand">
                   <Icon size={13} />
                   {c.label}
                 </span>
@@ -366,7 +366,7 @@ export function Mind() {
                   {c.card.title}
                 </span>
                 <span className="mt-2 block text-[11px] text-gray-500">{c.card.example}</span>
-                <span className="mt-3 block text-[11px] leading-relaxed text-red-800">
+                <span className="mt-3 block text-[11px] leading-relaxed text-brand">
                   &ldquo;{c.prompt}&rdquo;
                 </span>
               </motion.button>

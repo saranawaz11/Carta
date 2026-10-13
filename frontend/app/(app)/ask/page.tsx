@@ -48,7 +48,7 @@ function UserAvatar({ imageUrl, name }: { imageUrl?: string; name?: string | nul
     // eslint-disable-next-line @next/next/no-img-element
     <img src={imageUrl} alt="" className="size-8 shrink-0 rounded-full object-cover" />
   ) : (
-    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-red-200 text-xs font-semibold text-red-800">
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-red-200 text-xs font-semibold text-brand">
       {name?.[0]?.toUpperCase() ?? "U"}
     </span>
   );
@@ -303,7 +303,7 @@ export default function AskPage() {
                   <AssistantAvatar />
                   <div className="flex min-w-0 flex-1 flex-col gap-4">
                     {(message.content || thinking) && (
-                      <div className="rounded-2xl rounded-tl-md border border-red-100 bg-white px-5 py-4 shadow-sm">
+                      <div className="rounded-2xl rounded-tl-md border border-red-100 bg-panel px-5 py-4 shadow-sm">
                         {thinking ? (
                           <TypingDots />
                         ) : (
@@ -325,7 +325,7 @@ export default function AskPage() {
                             <li key={source.note_id} className="min-w-0">
                               <Link
                                 href={`/notes/${source.note_id}`}
-                                className="group/source flex min-w-0 items-center gap-3 rounded-xl border border-red-100 bg-white p-3
+                                className="group/source flex min-w-0 items-center gap-3 rounded-xl border border-red-100 bg-panel p-3
                                   transition-[transform,border-color,box-shadow] duration-200
                                   hover:-translate-y-0.5 hover:border-red-300 hover:shadow-md hover:shadow-red-100/60"
                               >
@@ -353,7 +353,7 @@ export default function AskPage() {
                           transition-[transform,border-color,box-shadow] duration-200
                           hover:-translate-y-0.5 hover:border-red-300 hover:shadow-md hover:shadow-red-100/60"
                       >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-red-600">
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-panel text-red-600">
                           <FileText size={16} />
                         </span>
                         <span className="flex min-w-0 flex-1 flex-col">
@@ -412,7 +412,7 @@ export default function AskPage() {
             event.preventDefault();
             void handleSend();
           }}
-          className="flex items-center gap-2 rounded-full border border-red-100 bg-white p-1.5 pl-5 shadow-lg shadow-red-100/50
+          className="flex items-center gap-2 rounded-full border border-red-100 bg-panel p-1.5 pl-5 shadow-lg shadow-red-100/50
             transition-[border-color,box-shadow] duration-200 focus-within:border-red-300 focus-within:ring-4 focus-within:ring-red-100"
         >
           <input

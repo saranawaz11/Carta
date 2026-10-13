@@ -57,7 +57,7 @@ export function ActionCard({
           {changes.map(([field, value]) => (
             <div
               key={field}
-              className="rounded-xl border border-red-100 bg-white px-3.5 py-2.5"
+              className="rounded-xl border border-red-100 bg-panel px-3.5 py-2.5"
             >
               <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500">
                 {field === "title" ? "Title" : "Content"}

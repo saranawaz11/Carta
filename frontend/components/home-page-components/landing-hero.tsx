@@ -11,6 +11,7 @@ import { useGSAP } from "@gsap/react";
 import { ArrowDown, ArrowUpRight, Check, Feather } from "lucide-react";
 
 import logo from "@/public/assets/logo.png";
+import { ThemeToggle } from "./theme-toggle";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
@@ -172,19 +173,19 @@ export function LandingHero() {
   );
 
   return (
-    <section ref={root} className="relative bg-[#fff6f3] text-[#1f1a1a]">
+    <section ref={root} className="relative bg-page text-ink">
       {/* Nav */}
       <motion.header
         initial={reduce ? false : { opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease }}
-        className="border-b border-red-900/10"
+        className="border-b border-line"
       >
         <div className="mx-auto grid h-16 w-full max-w-6xl grid-cols-2 items-center px-4 sm:h-20 sm:px-6 md:grid-cols-[1fr_auto_1fr]">
           <Link href="/" className="flex items-center gap-2">
             <Image src={logo} alt="" width={30} height={30} />
-            <span className={`${display.className} text-2xl font-normal tracking-tight text-red-800`}>
-              carta
+            <span className={`${display.className} text-2xl font-normal tracking-tight text-brand text-[var(--carta-brand)]`}>
+              Carta
             </span>
           </Link>
 
@@ -193,8 +194,8 @@ export function LandingHero() {
               <a
                 key={item.href}
                 href={item.href}
-                className="relative text-xs text-gray-700 transition-colors duration-300 hover:text-red-800
-                  after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-red-800
+                className="relative text-xs text-gray-700 transition-colors duration-300 hover:text-brand
+                  after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-left after:scale-x-0 
                   after:transition-transform after:duration-300 hover:after:scale-x-100"
               >
                 {item.label}
@@ -205,14 +206,14 @@ export function LandingHero() {
           <div className="flex items-center justify-self-end gap-4">
             <Link
               href="/sign-in"
-              className="text-xs text-gray-700 transition-colors duration-300 hover:text-red-800"
+              className="text-xs text-gray-700 transition-colors duration-300 hover:text-brand"
             >
               Sign in
             </Link>
             <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}>
               <Link
                 href="/sign-up"
-                className="group inline-flex items-center gap-2 rounded-full bg-red-800 px-4 py-2 text-xs font-medium text-white transition-colors duration-300 hover:bg-red-900"
+                className="group inline-flex items-center gap-2 rounded-full bg-[var(--carta-button)] px-4 py-2 text-xs font-medium text-white transition-colors duration-300 hover:bg-red-900"
               >
                 Get started
                 <ArrowUpRight
@@ -220,19 +221,20 @@ export function LandingHero() {
                   className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                 />
               </Link>
+              <ThemeToggle className="ml-4" />
             </motion.div>
           </div>
         </div>
       </motion.header>
 
       {/* Hero */}
-      <div className="mx-auto grid w-full max-w-6xl items-center gap-16 px-4 pb-24 pt-14 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10 lg:pb-28 lg:pt-20">
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-16 px-4 pb-24 pt-4 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10 lg:pb-28 lg:pt-10">
         <div data-copy>
           <motion.div initial="hidden" animate="show" className="flex flex-col items-start">
             <motion.p
               variants={rise}
               custom={0}
-              className="font-mono text-[10px] uppercase tracking-[0.2em] text-red-800"
+              className="font-mono text-[10px] uppercase tracking-[0.2em] text-brand"
             >
               A home for your inner world
             </motion.p>
@@ -245,7 +247,7 @@ export function LandingHero() {
                 <span
                   key={li}
                   aria-hidden="true"
-                  className={`block ${line.accent ? "text-red-800" : "text-[#1f1a1a]"}`}
+                  className={`block ${line.accent ? "text-brand" : "text-ink"}`}
                 >
                   {line.words.map((word, wi) => (
                     <span key={wi}>
@@ -273,7 +275,7 @@ export function LandingHero() {
               <motion.div whileHover={{ y: -3 }} whileTap={{ scale: 0.97 }}>
                 <Link
                   href="/sign-up"
-                  className="group inline-flex h-11 items-center gap-3 rounded-full bg-red-800 px-6 text-xs font-medium text-white shadow-lg shadow-red-900/20 transition-[background-color,box-shadow] duration-300 hover:bg-red-900 hover:shadow-xl hover:shadow-red-900/25"
+                  className="group inline-flex h-11 items-center gap-3 rounded-full bg-[var(--carta-button)] px-6 text-xs font-medium text-white shadow-lg shadow-red-900/20 transition-[background-color,box-shadow] duration-300 hover:bg-[var(--carta-button)] hover:shadow-xl hover:shadow-red-900/25"
                 >
                   Make room for your thoughts
                   <ArrowUpRight
@@ -285,7 +287,7 @@ export function LandingHero() {
 
               <a
                 href="#inside"
-                className="inline-flex items-center gap-2 text-xs font-medium text-red-800 transition-opacity duration-300 hover:opacity-70"
+                className="inline-flex items-center gap-2 text-xs font-medium text-[var(--carta-brand)] transition-opacity duration-300 hover:opacity-70"
               >
                 Take a look inside
                 <motion.span
@@ -331,9 +333,9 @@ export function LandingHero() {
                   scale: 1.03,
                   transition: { type: "spring", stiffness: 260, damping: 18 },
                 }}
-                className="rounded-2xl bg-white p-5 shadow-xl shadow-red-900/10"
+                className="rounded-2xl bg-panel p-5 shadow-xl shadow-red-900/10"
               >
-                <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-red-800">
+                <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-brand">
                   <Feather size={11} />
                   A thought to keep
                 </p>
@@ -349,9 +351,9 @@ export function LandingHero() {
             initial={reduce ? false : { opacity: 0, scale: 0.6, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 16, delay: 2 }}
-            className="absolute -bottom-5 right-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] text-gray-700 shadow-lg shadow-red-900/10 sm:right-6"
+            className="absolute -bottom-5 right-3 inline-flex items-center gap-2 rounded-full bg-panel px-4 py-2 text-[11px] text-gray-700 shadow-lg shadow-red-900/10 sm:right-6"
           >
-            <Check size={13} className="text-red-800" />
+            <Check size={13} className="text-brand" />
             A thought, kept.
           </motion.div>
         </div>
@@ -362,7 +364,7 @@ export function LandingHero() {
         initial={reduce ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1, delay: 1.4 }}
-        className="border-t border-red-900/10"
+        className="border-t border-line"
       >
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 font-mono text-[10px] uppercase tracking-[0.18em] text-gray-500 sm:px-6">
           <span>Personal notes. Purposeful days.</span>

@@ -63,7 +63,7 @@ export function NotesPanel({
       />
       <aside
         aria-label="Your notes"
-        className={`fixed inset-y-0 left-0 z-50 flex w-[320px] max-w-[88vw] flex-col border-r border-red-100 bg-white shadow-2xl
+        className={`fixed inset-y-0 left-0 z-50 flex w-[320px] max-w-[88vw] flex-col border-r border-red-100 bg-panel shadow-2xl
           transition-[transform,visibility] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
           ${open ? "visible translate-x-0" : "invisible -translate-x-full lg:visible"}
           lg:static lg:z-auto lg:w-[300px] lg:shrink-0 lg:translate-x-0 lg:shadow-none`}

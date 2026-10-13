@@ -104,13 +104,13 @@ function SaveStatus({
     );
   if (saving)
     return (
-      <span className={`${base} bg-white text-gray-600`}>
+      <span className={`${base} bg-panel text-gray-600`}>
         <Loader2 size={13} className="animate-spin" /> Saving...
       </span>
     );
-  if (dirty) return <span className={`${base} bg-white text-gray-500`}>Unsaved changes</span>;
+  if (dirty) return <span className={`${base} bg-panel text-gray-500`}>Unsaved changes</span>;
   return (
-    <span className={`${base} bg-white text-gray-600`}>
+    <span className={`${base} bg-panel text-gray-600`}>
       <Check size={13} className="text-red-600" /> Saved
     </span>
   );
@@ -130,7 +130,7 @@ function SummaryPanel({ open, onClose }: { open: boolean; onClose: () => void })
         aria-label="Note summary"
         aria-hidden={!open}
         inert={!open}
-        className={`fixed inset-y-0 right-0 z-50 flex w-[360px] max-w-[90vw] flex-col border-l border-red-100 bg-white shadow-2xl
+        className={`fixed inset-y-0 right-0 z-50 flex w-[360px] max-w-[90vw] flex-col border-l border-red-100 bg-panel shadow-2xl
           transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
           ${open ? "translate-x-0" : "translate-x-full"}
           xl:static xl:z-auto xl:shrink-0 xl:translate-x-0 xl:overflow-hidden xl:shadow-none
@@ -243,7 +243,7 @@ function Provenance({ note, words, minutes }: { note: Note; words: number; minut
   ];
 
   return (
-    <section className="mt-6 overflow-hidden rounded-3xl border border-red-100 bg-white shadow-sm motion-safe:animate-fade-up">
+    <section className="mt-6 overflow-hidden rounded-3xl border border-red-100 bg-panel shadow-sm motion-safe:animate-fade-up">
       <div className="flex items-center gap-3 bg-gradient-to-r from-red-50 via-rose-50 to-amber-50 px-6 py-5 sm:px-8">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-red-700 text-white shadow-sm shadow-red-200">
           <ScrollText size={18} />
@@ -393,7 +393,7 @@ export default function NotePage({ params }: { params: Promise<{ id: string }> }
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error.message}
         </p>
-        <Link href="/" className="text-sm font-medium text-red-700 transition-colors hover:text-red-800">
+        <Link href="/" className="text-sm font-medium text-red-700 transition-colors hover:text-brand">
           Back to notes
         </Link>
       </div>
@@ -410,7 +410,7 @@ export default function NotePage({ params }: { params: Promise<{ id: string }> }
           </p>
           <Link
             href={note ? "/deleted" : "/"}
-            className="text-sm font-medium text-red-700 transition-colors hover:text-red-800"
+            className="text-sm font-medium text-red-700 transition-colors hover:text-brand"
           >
             {note ? "Go to Trash" : "Back to notes"}
           </Link>
@@ -444,13 +444,13 @@ export default function NotePage({ params }: { params: Promise<{ id: string }> }
                 type="button"
                 onClick={() => setNotesOpen(true)}
                 aria-label="Open notes list"
-                className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-red-100 bg-white transition-[border-color,color] duration-200 hover:border-red-300 hover:text-red-700 lg:hidden"
+                className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-red-100 bg-panel transition-[border-color,color] duration-200 hover:border-red-300 hover:text-red-700 lg:hidden"
               >
                 <PanelLeft size={15} />
               </button>
               <Link
                 href="/"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-red-100 bg-white px-3 py-1.5 font-medium transition-[border-color,color] duration-200 hover:border-red-300 hover:text-red-700"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-red-100 bg-panel px-3 py-1.5 font-medium transition-[border-color,color] duration-200 hover:border-red-300 hover:text-red-700"
               >
                 <ArrowLeft size={14} />
                 All Notes
@@ -468,7 +468,7 @@ export default function NotePage({ params }: { params: Promise<{ id: string }> }
                 className={`inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-[background-color,border-color,color] duration-200 ${
                   summaryOpen
                     ? "border-red-700 bg-red-700 text-white hover:bg-red-800"
-                    : "border-red-100 bg-white text-gray-700 hover:border-red-300 hover:text-red-700"
+                    : "border-red-100 bg-panel text-gray-700 hover:border-red-300 hover:text-red-700"
                 }`}
               >
                 <Sparkles size={14} />
@@ -478,7 +478,7 @@ export default function NotePage({ params }: { params: Promise<{ id: string }> }
                 type="button"
                 disabled={acting}
                 onClick={() => void runAction(archiveNote, "/archive")}
-                className="inline-flex h-9 items-center gap-2 rounded-full border border-red-100 bg-white px-4 text-sm font-medium text-gray-700 transition-[border-color,color,opacity] duration-200 hover:border-red-300 hover:text-red-700 disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-2 rounded-full border border-red-100 bg-panel px-4 text-sm font-medium text-gray-700 transition-[border-color,color,opacity] duration-200 hover:border-red-300 hover:text-red-700 disabled:opacity-50"
               >
                 <Archive size={14} />
                 Archive
@@ -502,7 +502,7 @@ export default function NotePage({ params }: { params: Promise<{ id: string }> }
           )}
 
           {/* Editor */}
-          <div className="rounded-3xl border border-red-100 bg-white px-6 py-8 shadow-sm motion-safe:animate-fade-up sm:px-12 sm:py-12">
+          <div className="rounded-3xl border border-red-100 bg-panel px-6 py-8 shadow-sm motion-safe:animate-fade-up sm:px-12 sm:py-12">
             <p className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
               <span>Last edited {formatDate(updated, true)}</span>
               <span aria-hidden="true">•</span>

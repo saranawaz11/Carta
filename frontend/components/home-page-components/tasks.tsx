@@ -146,7 +146,7 @@ export function Tasks() {
       <div className="grid items-center gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
         {/* Copy */}
         <div data-head>
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-red-800">
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-brand">
             Make a little headway
           </p>
           <h2
@@ -181,7 +181,7 @@ export function Tasks() {
             className="mt-6 flex flex-wrap gap-2"
           >
             {CHIPS.map((chip) => (
-              <li key={chip} className="rounded-full bg-[#f3ebe5] px-3 py-1.5 text-[10px] text-gray-600">
+              <li key={chip} className="rounded-full bg-[var(--carta-chip)] px-3 py-1.5 text-[10px] text-gray-600">
                 {chip}
               </li>
             ))}
@@ -195,9 +195,9 @@ export function Tasks() {
             whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 1.1, ease }}
-            className="rounded-[2rem] bg-[#f7ddd7] p-4 sm:p-8"
+            className="rounded-[2rem] bg-[var(--carta-plate)] p-4 sm:p-8"
           >
-            <div className="rounded-2xl bg-white p-5 shadow-xl shadow-red-900/10 sm:p-7">
+            <div className="rounded-2xl bg-panel p-5 shadow-xl shadow-red-900/10 sm:p-7">
               <div className="flex items-center justify-between gap-3">
                 <h3 className={`${display.className} text-2xl font-normal sm:text-[1.7rem]`}>
                   A little forward.
@@ -208,7 +208,7 @@ export function Tasks() {
                   disabled={added >= EXTRA.length}
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-red-800 px-3.5 text-[11px] font-medium text-white transition-[background-color,opacity] duration-300 hover:bg-red-900 disabled:opacity-40"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[var(--carta-button)] px-3.5 text-[11px] font-medium text-white transition-[background-color,opacity] duration-300 hover:bg-[var(--carta-button-hover)] disabled:opacity-40"
                 >
                   <Plus size={12} />
                   Add task
@@ -218,7 +218,7 @@ export function Tasks() {
               <div className="mt-6 grid gap-6 sm:grid-cols-[1fr_210px]">
                 {/* Task list */}
                 <div className="min-w-0">
-                  <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-red-800">This week</p>
+                  <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-brand">This week</p>
                   <ul className="mt-3">
                     <AnimatePresence initial={false}>
                       {tasks.map((task) => (
@@ -227,7 +227,7 @@ export function Tasks() {
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           transition={{ duration: 0.5, ease }}
-                          className="overflow-hidden border-b border-red-900/10 last:border-b-0"
+                          className="overflow-hidden border-b border-line last:border-b-0"
                         >
                           <button
                             type="button"
@@ -238,7 +238,7 @@ export function Tasks() {
                             <motion.span
                               whileTap={{ scale: 0.8 }}
                               className={`flex size-5 shrink-0 items-center justify-center rounded-full border transition-[background-color,border-color] duration-300 ${
-                                task.done ? "border-red-800 bg-red-800" : "border-gray-300 bg-white"
+                                task.done ? "border-red-800 bg-red-800" : "border-gray-300 bg-panel"
                               }`}
                             >
                               <AnimatePresence initial={false}>
@@ -272,7 +272,7 @@ export function Tasks() {
                 </div>
 
                 {/* Calendar */}
-                <div className="rounded-xl bg-[#fbf1ed] p-3.5">
+                <div className="rounded-xl bg-[var(--carta-wash)] p-3.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-medium">{label}</span>
                     <span className="flex items-center gap-1 text-gray-500">
@@ -281,7 +281,7 @@ export function Tasks() {
                         onClick={() => go(-1)}
                         disabled={offset <= -2}
                         aria-label="Previous month"
-                        className="rounded p-0.5 transition-colors hover:text-red-800 disabled:opacity-30"
+                        className="rounded p-0.5 transition-colors hover:text-brand disabled:opacity-30"
                       >
                         <ChevronLeft size={13} />
                       </button>
@@ -290,7 +290,7 @@ export function Tasks() {
                         onClick={() => go(1)}
                         disabled={offset >= 2}
                         aria-label="Next month"
-                        className="rounded p-0.5 transition-colors hover:text-red-800 disabled:opacity-30"
+                        className="rounded p-0.5 transition-colors hover:text-brand disabled:opacity-30"
                       >
                         <ChevronRight size={13} />
                       </button>
@@ -322,7 +322,7 @@ export function Tasks() {
                             <span
                               className={`flex size-6 items-center justify-center rounded-full tabular-nums transition-colors duration-300 ${
                                 isToday
-                                  ? "bg-red-800 font-semibold text-white"
+                                  ? "bg-[var(--carta-button)] font-semibold text-white"
                                   : cell.current
                                     ? "text-gray-700"
                                     : "text-gray-300"
@@ -333,7 +333,7 @@ export function Tasks() {
                             {mark && !isToday && (
                               <span
                                 className={`absolute bottom-0 size-1 rounded-full ${
-                                  mark === "open" ? "bg-red-600" : "bg-gray-300"
+                                  mark === "open" ? "bg-[var(--carta-button)]" : "bg-gray-300"
                                 }`}
                               />
                             )}
@@ -349,7 +349,7 @@ export function Tasks() {
               <div className="mt-6">
                 <div className="flex items-center justify-between gap-3 text-[11px]">
                   <span className="text-gray-600">{message}</span>
-                  <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-red-800 tabular-nums">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-brand tabular-nums">
                     {done} of {tasks.length} complete
                   </span>
                 </div>

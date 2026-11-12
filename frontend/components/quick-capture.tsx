@@ -52,9 +52,15 @@ const MODES = [
 type Mode = (typeof MODES)[number]["id"];
 
 type CaptureResponse = {
-  outcome: "task_created" | "note_created" | "pending_action" | "message";
+  outcome:
+    | "task_created"
+    | "note_created"
+    | "pending_action"
+    | "message"
+    | "capture_created";
   task: Task | null;
   note: Note | null;
+  capture: { note: Note | null; tasks: Task[] } | null;
   pending_action: PendingAction | null;
   message: string | null;
 };
@@ -140,7 +146,7 @@ export function QuickCapture() {
         },
       });
       setResult(response);
-      setText("");
+      if (response.outcome !== "message") setText("");
       await refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Capture failed");
@@ -388,6 +394,41 @@ export function QuickCapture() {
                     >
                       View tasks <ArrowUpRight size={13} />
                     </Link>
+                  </Notice>
+                )}
+                {result?.outcome === "capture_created" && result.capture && (
+                  <Notice icon={CheckCircle2} title="Captured">
+                    {result.capture.note && (
+                      <Link
+                        href={`/notes/${result.capture.note.id}`}
+                        onClick={() => setOpen(false)}
+                        className="inline-flex items-center gap-1 font-medium text-brand transition-opacity hover:opacity-75"
+                      >
+                        Note: {result.capture.note.title || "Untitled"} <ArrowUpRight size={13} />
+                      </Link>
+                    )}
+                    {result.capture.tasks.length > 0 && (
+                      <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                        {result.capture.tasks.map((task) => (
+                          <li key={task.id}>
+                            {task.title}
+                            {task.due_at ? ` (due ${formatDue(task)})` : " (no date)"}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {result.capture.tasks.length > 0 && (
+                      <Link
+                        href="/tasks"
+                        onClick={() => setOpen(false)}
+                        className="mt-1 inline-flex items-center gap-1 font-medium text-brand transition-opacity hover:opacity-75"
+                      >
+                        View tasks <ArrowUpRight size={13} />
+                      </Link>
+                    )}
+                    {result.message && (
+                      <p className="mt-1 text-brand">{result.message}</p>
+                    )}
                   </Notice>
                 )}
                 {result?.outcome === "note_created" && result.note && (

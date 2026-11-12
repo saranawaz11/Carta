@@ -14,7 +14,15 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { type Task, useTaskActions, useTasks } from "@/lib/tasks";
+import { DueDatePicker } from "@/components/due-date-picker";
+import {
+  selectionFromTask,
+  selectionToPayload,
+  type DueSelection,
+  type Task,
+  useTaskActions,
+  useTasks,
+} from "@/lib/tasks";
 
 const display = Fraunces({ subsets: ["latin"], display: "swap" });
 
@@ -32,6 +40,14 @@ const dayDiff = (due: Date | null, now: Date): number | null =>
     ? Math.round((startOfDay(due).getTime() - startOfDay(now).getTime()) / DAY)
     : null;
 
+function formatSelection({ from, to, time }: DueSelection): string {
+  if (!from) return "";
+  const opts: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" };
+  const start = from.toLocaleDateString(undefined, opts);
+  if (to) return `${start} → ${to.toLocaleDateString(undefined, opts)}`;
+  return time ? `${start}, ${time}` : start;
+}
+
 function dueLabel(task: Task, due: Date | null, diff: number | null): string {
   if (!due || diff === null) return "No due date";
   const time = task.due_has_time
@@ -40,8 +56,12 @@ function dueLabel(task: Task, due: Date | null, diff: number | null): string {
   if (diff < 0) return `${-diff}d overdue`;
   if (diff === 0) return time ? `Today, ${time}` : "Today";
   if (diff === 1) return time ? `Tomorrow, ${time}` : "Tomorrow";
-  const date = due.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  return time ? `${date}, ${time}` : date;
+  const date = due.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  const end = task.due_end_at
+    ? new Date(task.due_end_at).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+    : null;
+  const range = end && end !== date ? `${date} → ${end}` : date;
+  return time ? `${range}, ${time}` : range;
 }
 
 /* ---------- small pieces ---------- */
@@ -79,6 +99,29 @@ function TaskRow({
 }) {
   const { task } = item;
   const done = Boolean(task.completed_at);
+  const { updateDeadline } = useTaskActions();
+  const [deadlineError, setDeadlineError] = useState<string | null>(null);
+
+  async function changeDeadline(selection: DueSelection) {
+    const payload = selectionToPayload(selection);
+    setDeadlineError(null);
+    try {
+      await updateDeadline(task, payload.due_at, payload.due_end_at, payload.due_has_time);
+    } catch (cause) {
+      setDeadlineError(cause instanceof Error ? cause.message : "Unable to update date");
+    }
+  }
+
+  const picker = (className: string) => (
+    <DueDatePicker
+      value={selectionFromTask(task)}
+      onChange={changeDeadline}
+      ariaLabel={`Change due date for "${task.title}"`}
+      className={`cursor-pointer rounded-full outline-none focus-visible:ring-4 focus-visible:ring-red-100 ${className}`}
+    >
+      <DueChip item={item} />
+    </DueDatePicker>
+  );
 
   return (
     <li
@@ -102,10 +145,14 @@ function TaskRow({
         >
           {task.title}
         </p>
-        <DueChip item={item} className="mt-1.5 sm:hidden" />
+        <div className="mt-1.5 sm:hidden">{picker("")}</div>
+        {deadlineError && (
+          <p role="alert" className="mt-1 text-xs text-red-700">
+            {deadlineError}
+          </p>
+        )}
       </div>
-      <DueChip item={item} className="hidden sm:inline-flex" />
-      <button
+      <div className="hidden sm:block">{picker("")}</div>      <button
         type="button"
         onClick={onRemove}
         aria-label={`Delete "${task.title}"`}
@@ -302,10 +349,11 @@ export default function TasksPage() {
   const query = rawQuery.toLowerCase();
 
   const { data: tasks, error, isLoading, isValidating, mutate } = useTasks();
-  const { toggle, remove, createFromText } = useTaskActions();
+  const { toggle, remove, create, createFromText } = useTaskActions();
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
+  const [selection, setSelection] = useState<DueSelection>({ time: "" });
   const [adding, setAdding] = useState(false);
   const now = useMemo(() => new Date(), []);
 
@@ -383,8 +431,13 @@ export default function TasksPage() {
     setAdding(true);
     setActionError(null);
     try {
-      await createFromText(value);
+      if (selection.from) {
+        await create(value, selectionToPayload(selection));
+      } else {
+        await createFromText(value);
+      }
       setTitle("");
+      setSelection({ time: "" });
     } catch (cause) {
       setActionError(cause instanceof Error ? cause.message : "Unable to add task");
     } finally {
@@ -482,6 +535,19 @@ export default function TasksPage() {
           aria-label="New task"
           className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
         />
+        <DueDatePicker
+          value={selection}
+          onChange={setSelection}
+          ariaLabel="Set due date"
+          className="inline-flex h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-red-100 px-3 text-xs font-medium text-gray-600 outline-none transition-colors hover:border-red-300 hover:text-red-700 focus-visible:ring-4 focus-visible:ring-red-100"
+        >
+          <CalendarDays size={15} />
+          <span className="hidden sm:inline">
+            {selection.from
+              ? formatSelection(selection)
+              : "Due date"}
+          </span>
+        </DueDatePicker>
         <button
           type="submit"
           disabled={adding || !title.trim()}

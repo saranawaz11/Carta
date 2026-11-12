@@ -3,6 +3,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "react-day-picker/style.css";
 
 /* `dark:` utilities and token swaps follow the .dark class that next-themes puts on <html> */
 @custom-variant dark (&:where(.dark, .dark *));

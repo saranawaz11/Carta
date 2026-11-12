@@ -12,6 +12,7 @@ class NoteOut(BaseModel):
     id: UUID
     title: str
     content: str
+    content_rich: dict | None = None
     tags: list[str]
     archived_at: datetime | None
     deleted_at: datetime | None
@@ -91,6 +92,7 @@ class ConfirmResponse(BaseModel):
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=500)
     due_at: datetime | None = None
+    due_end_at: datetime | None = None
     due_has_time: bool = False
     now: datetime | None = None
     timezone: str | None = None
@@ -111,8 +113,12 @@ class TaskCreate(BaseModel):
             raise ValueError("now and timezone must be provided together")
         if self.now is not None and self.now.utcoffset() is None:
             raise ValueError("now must include a timezone offset")
-        if self.now is not None and (self.due_at is not None or self.due_has_time):
+        if self.now is not None and (self.due_at is not None or self.due_end_at is not None or self.due_has_time):
             raise ValueError("Natural-language tasks cannot include a resolved due date")
+        if self.due_end_at is not None and self.due_at is not None and self.due_end_at < self.due_at:
+            raise ValueError("Range end date cannot precede start date")
+        if self.due_end_at is not None and self.due_has_time:
+            raise ValueError("Timed tasks cannot have an end date")
         return self
 
 
@@ -145,7 +151,24 @@ class TaskDateResolution(BaseModel):
 
 
 class TaskUpdate(BaseModel):
-    completed: bool
+    model_config = ConfigDict(extra="forbid")
+
+    completed: bool | None = None
+    due_at: datetime | None = None
+    due_end_at: datetime | None = None
+    due_has_time: bool | None = None
+
+    @model_validator(mode="after")
+    def validate_update(self) -> "TaskUpdate":
+        if not self.model_fields_set or all(
+            getattr(self, field) is None for field in self.model_fields_set
+        ):
+            raise ValueError("At least one field must be provided")
+        if self.due_end_at is not None and self.due_at is not None and self.due_end_at < self.due_at:
+            raise ValueError("Range end date cannot precede start date")
+        if self.due_end_at is not None and self.due_has_time:
+            raise ValueError("Timed tasks cannot have an end date")
+        return self
 
 
 class TaskOut(BaseModel):
@@ -154,7 +177,9 @@ class TaskOut(BaseModel):
     id: UUID
     title: str
     due_at: datetime | None
+    due_end_at: datetime | None = None
     due_has_time: bool
+    source_text: str | None = None
     completed_at: datetime | None
     created_at: datetime
 
@@ -189,10 +214,57 @@ class CaptureRequest(BaseModel):
         return value
 
 
+class TaskCandidate(BaseModel):
+    title: str = Field(min_length=1, max_length=500)
+    source_text: str | None = None
+    date_status: Literal["resolved", "no_date", "clarify"]
+    due_at: str | None = None
+    due_end_at: str | None = None
+    due_has_time: bool = False
+    message: str | None = None
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Task title must not be empty")
+        return value
+
+    @model_validator(mode="after")
+    def validate_resolution(self) -> "TaskCandidate":
+        if self.date_status == "resolved" and self.due_at is None:
+            raise ValueError("A resolved date must include due_at")
+        if self.date_status == "no_date" and (
+            self.due_at is not None or self.due_end_at is not None or self.due_has_time
+        ):
+            raise ValueError("An undated task cannot include due date or time")
+        if self.date_status == "clarify" and self.due_at is not None:
+            raise ValueError("An unresolved date cannot include due_at")
+        if self.due_end_at is not None and self.due_at is not None and self.due_end_at < self.due_at:
+            raise ValueError("Range end date cannot precede start date")
+        if self.due_end_at is not None and self.due_has_time:
+            raise ValueError("Timed tasks cannot have an end date")
+        return self
+
+
+class CaptureExtraction(BaseModel):
+    note_title: str | None = None
+    note_content: str | None = None
+    tasks: list[TaskCandidate] = Field(default_factory=list)
+    clarification: str | None = None
+
+
+class CaptureCreated(BaseModel):
+    note: NoteOut | None = None
+    tasks: list[TaskOut] = Field(default_factory=list)
+
+
 class CaptureResponse(BaseModel):
-    outcome: Literal["task_created", "note_created", "pending_action", "message"]
+    outcome: Literal["task_created", "note_created", "pending_action", "message", "capture_created"]
     task: TaskOut | None = None
     note: NoteOut | None = None
+    capture: CaptureCreated | None = None
     pending_action: PendingAction | None = None
     message: str | None = None
 

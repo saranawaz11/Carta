@@ -26,6 +26,9 @@ class Note(Base):
     content: Mapped[str] = mapped_column(
         Text, nullable=False, server_default=text("''")
     )
+    content_rich: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True
+    )
     tags: Mapped[list[str]] = mapped_column(
         ARRAY(Text), nullable=False, server_default=text("'{}'")
     )
@@ -83,8 +86,14 @@ class Task(Base):
     due_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    due_end_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     due_has_time: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
+    )
+    source_text: Mapped[str | None] = mapped_column(
+        Text, nullable=True
     )
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

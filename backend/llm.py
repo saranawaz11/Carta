@@ -23,7 +23,7 @@ from langgraph.prebuilt import ToolNode
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
-from schemas import TaskDateResolution
+from schemas import TaskDateResolution, CaptureExtraction, TaskCandidate
 
 from core import config
 
@@ -81,10 +81,15 @@ TASK_DATE_PROMPT = (
     "task text and the user's current local date, time, and timezone. Return "
     "date_status='no_date' with the original title unchanged and no due date "
     "when no date is stated. Return date_status='resolved' only when a stated "
-    "date can be resolved confidently: remove the date phrase from the title, "
-    "preserving all meaningful task text, and return due_at as YYYY-MM-DD for "
+    "date can be resolved confidently: return due_at as YYYY-MM-DD for "
     "date-only values or ISO 8601 with the user's timezone offset when a time "
-    "was stated. Set due_has_time only when the user explicitly gave a time. "
+    "was stated. ALWAYS resolve explicit weekday and month names (e.g. 'Friday', "
+    "'March 5') into due_at, tolerating small spelling mistakes. The title is a "
+    "refined task name: remove the date/time phrase and its linking word "
+    "('on Friday', 'by March 5', 'tomorrow at 5pm'), fix capitalization "
+    "(sentence case) and spelling, and keep the action and its object, e.g. "
+    "'visit bank on Friday' becomes 'Visit bank'. "
+    "Set due_has_time only when the user explicitly gave a time. "
     "Never invent a time or use today as a default. For an ambiguous or "
     "unresolvable stated date, return date_status='clarify', no due_at, and a "
     "brief user-facing message asking for a more specific date; do not guess. "
@@ -147,6 +152,118 @@ def resolve_task_date(
     if not isinstance(resolution, TaskDateResolution):
         raise RuntimeError("Task date graph returned no valid resolution")
     return resolution
+
+
+CAPTURE_EXTRACTION_PROMPT = (
+    "Analyze the user's statement and extract structured capture content. "
+    "Notes and tasks are NOT mutually exclusive: actionable items become tasks AND "
+    "the surrounding content is still kept as a note. "
+    "note_content: when the statement has more than one sentence or paragraph, or "
+    "contains any learning goals, reference material, plans, ideas or context, return "
+    "note_content containing ALL of that content, cleaned up and with the user's "
+    "paragraphs preserved (separate paragraphs with blank lines). Keep sentences "
+    "that also produce a task inside the note as well; do not remove them. Do not "
+    "summarize away detail and do not include instructions addressed to the "
+    "assistant such as 'remind me to...' or 'keep these together as a note'. "
+    "note_title: whenever note_content is returned, also return a concise, "
+    "meaningful title (2-6 words, Title Case, no trailing punctuation) that names "
+    "the overall topic or purpose of the note (e.g. 'Docker Learning & EC2 "
+    "Deployment'), not simply its first sentence. "
+    "Dates: 'mid/middle of <month>' means the 15th of that month; 'after/from/"
+    "since <date>' (e.g. 'after 15th of December') means that specific date; "
+    "resolve these instead of asking for clarification. "
+    "Return note_content as null ONLY when the whole statement is a single short "
+    "reminder or to-do with no extra context. "
+    "tasks: also list every distinct actionable item or reminder as a task "
+    "candidate, e.g. 'deploy my app before the end of this month' becomes a task "
+    "with that month-end deadline while remaining in the note. "
+    "'End of this month' means the last day of the current month. "
+    "Return a list of task candidates, where each candidate has: "
+    "- title: a concise, actionable task statement (3-20 words) "
+    "- source_text: the original phrase/context from the input "
+    "- date_status: 'no_date', 'resolved', or 'clarify' "
+    "- If date_status is 'resolved', populate due_at as YYYY-MM-DD for date-only "
+    "or ISO 8601 with the user's timezone offset for timed deadlines, and due_has_time "
+    "accordingly. If date_status is 'clarify', provide a message asking for specifics. "
+    "Never invent dates or use today as a default, but ALWAYS resolve an explicitly "
+    "stated day or month: 'Friday' or 'coming Friday' is the next occurrence after "
+    "today, 'next Friday' is the occurrence in the following week, an unqualified "
+    "month or 'March 5' is its next upcoming occurrence (month-only means its last "
+    "day); tolerate small spelling mistakes in these names. Task titles must be "
+    "refined: remove the date/time phrase and its linking word, use sentence "
+    "case, fix spelling, keep the action and its object (e.g. 'visit bank on "
+    "Friday' becomes 'Visit bank', with the date in due_at). "
+    "If the statement is purely informational with no tasks, return an empty tasks list and the note. "
+    "If extraction fails or the statement is ambiguous, return clarification with an "
+    "actionable message."
+)
+
+
+class CaptureExtractionState(TypedDict, total=False):
+    text: str
+    now: str
+    timezone: str
+    extraction: "CaptureExtraction"
+
+
+def _extract_capture_node(state: CaptureExtractionState) -> dict[str, Any]:
+    timezone_name = state["timezone"]
+    current = datetime.fromisoformat(state["now"]).astimezone(
+        ZoneInfo(timezone_name)
+    )
+    
+    class CaptureExtractionOutput(BaseModel):
+        note_title: str | None = Field(None, description="Short descriptive note title (2-6 words) reflecting the overall topic")
+        note_content: str | None = Field(None, description="Informational content to save as a note")
+        tasks: list[TaskCandidate] = Field(default_factory=list, description="Actionable tasks")
+        clarification: str | None = Field(None, description="Message if extraction needs user clarification")
+    
+    model = ChatOpenAI(
+        model=config.OPENAI_CHAT_MODEL,
+        api_key=config.OPENAI_API_KEY or None,
+    ).with_structured_output(CaptureExtractionOutput)
+    
+    result = model.invoke(
+        [
+            SystemMessage(CAPTURE_EXTRACTION_PROMPT),
+            HumanMessage(
+                f"Current local datetime: {current.isoformat()}\n"
+                f"Timezone: {timezone_name}\n"
+                f"User statement:\n{state['text']}"
+            ),
+        ]
+    )
+    
+    extraction = CaptureExtraction(
+        note_title=result.note_title,
+        note_content=result.note_content,
+        tasks=result.tasks,
+        clarification=result.clarification,
+    )
+    return {"extraction": extraction}
+
+
+def _compile_capture_extraction_graph():
+    graph = StateGraph(CaptureExtractionState)
+    graph.add_node("extract", _extract_capture_node)
+    graph.add_edge(START, "extract")
+    graph.add_edge("extract", END)
+    return graph.compile()
+
+
+_capture_extraction_graph = _compile_capture_extraction_graph()
+
+
+def extract_capture(
+    text: str, now: str, timezone_name: str
+) -> CaptureExtraction:
+    state = _capture_extraction_graph.invoke(
+        {"text": text, "now": now, "timezone": timezone_name}
+    )
+    extraction = state.get("extraction")
+    if not isinstance(extraction, CaptureExtraction):
+        raise RuntimeError("Capture extraction graph returned no valid result")
+    return extraction
 
 
 _splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)

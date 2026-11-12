@@ -12,6 +12,7 @@ export type Note = {
   id: string;
   title: string;
   content: string;
+  content_rich: object | null;
   tags: string[];
   archived_at: string | null;
   deleted_at: string | null;
@@ -22,6 +23,7 @@ export type Note = {
 export type NoteChanges = {
   title?: string;
   content?: string;
+  content_rich?: object | null;
   tags?: string[];
 };
 

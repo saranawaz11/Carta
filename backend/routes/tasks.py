@@ -41,7 +41,7 @@ def create_task(
                 detail=str(error),
             ) from error
     return tasks_service.create_task(
-        db, clerk_user_id, request.title, request.due_at, request.due_has_time
+        db, clerk_user_id, request.title, request.due_at, request.due_end_at, request.due_has_time
     )
 
 
@@ -52,7 +52,16 @@ def update_task(
     clerk_user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    return tasks_service.set_completed(db, task_id, clerk_user_id, request.completed)
+    if request.completed is not None:
+        return tasks_service.set_completed(db, task_id, clerk_user_id, request.completed)
+    if request.due_at is not None or request.due_end_at is not None or request.due_has_time is not None:
+        return tasks_service.update_deadline(
+            db, task_id, clerk_user_id, request.due_at, request.due_end_at, request.due_has_time
+        )
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="At least one field must be provided",
+    )
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)

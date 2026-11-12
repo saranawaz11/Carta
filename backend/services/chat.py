@@ -10,9 +10,28 @@ import llm
 from repositories import note_chunks as chunks_repository
 from repositories import notes as notes_repository
 from schemas import ChatRequest, NoteUpdate
-from services import embedding, notes as notes_service
+from services import embedding, notes as notes_service, tasks as tasks_service
 
 SYNC_BATCH = 5
+
+_YES = {
+    "yes", "y", "yeah", "yep", "yup", "ok", "okay", "sure", "confirm",
+    "go ahead", "do it", "proceed", "yes please", "please do", "confirmed",
+}
+_NO = {
+    "no", "n", "nope", "cancel", "stop", "dont", "do not", "never mind",
+    "nevermind", "no thanks",
+}
+
+
+def _quick_decision(text: str) -> str | None:
+    cleaned = "".join(c for c in text.lower() if c.isalnum() or c == " ")
+    cleaned = " ".join(cleaned.split())
+    if cleaned in _YES:
+        return "confirm"
+    if cleaned in _NO:
+        return "cancel"
+    return None
 
 
 def ask(
@@ -33,6 +52,9 @@ def ask(
         return notes_service.create_note(
             db, user_id, background, title=title, content=content
         )
+
+    def create_task(title: str, due_at, due_has_time: bool, user_id: str):
+        return tasks_service.create_task(db, user_id, title, due_at, due_has_time)
 
     def get_note(note_id: UUID, user_id: str):
         return notes_repository.get_note(db, note_id, user_id)
@@ -68,10 +90,26 @@ def ask(
             "message": result["message"],
         }
 
+    decision = _quick_decision(request.question) if pending else None
+    if decision:
+        outcome = resolve(decision)
+        yield {"token": outcome["message"]}
+        yield {
+            "done": {
+                "answer": outcome["message"],
+                "sources": [],
+                "pending_action": None,
+                "created_note": None,
+                "resolved": outcome,
+            }
+        }
+        return
+
     configurable = {
         "user_id": clerk_user_id,
         "similar_chunks": search,
         "create_note": create,
+        "create_task": create_task,
         "get_note": get_note,
         "resolve_action": resolve,
         "pending_action": pending.model_dump(mode="json") if pending else None,

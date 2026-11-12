@@ -59,6 +59,15 @@ def list_notes(
     return list(db.scalars(statement))
 
 
+def list_tags(db: Session, clerk_user_id: str) -> list[str]:
+    tags = (
+        select(func.unnest(Note.tags).label("tag"))
+        .where(Note.clerk_user_id == clerk_user_id, Note.deleted_at.is_(None))
+        .subquery()
+    )
+    return list(db.scalars(select(tags.c.tag).distinct().order_by(tags.c.tag)))
+
+
 def purge_expired_notes(db: Session, clerk_user_id: str) -> None:
     expired_before = datetime.now(timezone.utc) - timedelta(days=15)
     db.execute(

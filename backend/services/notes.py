@@ -6,6 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from repositories import note_chunks as chunks_repository
+from repositories import note_summaries as summaries_repository
 from repositories import notes as notes_repository
 from schemas import NoteUpdate
 from services import embedding
@@ -42,6 +43,29 @@ def list_notes(
     return notes_repository.list_notes(db, clerk_user_id, state, query)
 
 
+def normalize_tags(tags: list[str]) -> list[str]:
+    result: list[str] = []
+    for tag in tags:
+        clean = " ".join(tag.lower().split())
+        if len(clean) > 30:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Tags can be at most 30 characters",
+            )
+        if clean and clean not in result:
+            result.append(clean)
+    if len(result) > 10:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A note can have at most 10 tags",
+        )
+    return result
+
+
+def list_tags(db: Session, clerk_user_id: str) -> list[str]:
+    return notes_repository.list_tags(db, clerk_user_id)
+
+
 def update_note(
     db: Session,
     note_id: UUID,
@@ -62,6 +86,8 @@ def update_note(
             detail="Deleted notes cannot be edited",
         )
     values = changes.model_dump(exclude_unset=True)
+    if "tags" in values:
+        values["tags"] = normalize_tags(values["tags"])
     values["content_hash"] = embedding.compute_hash(
         values.get("title", note.title), values.get("content", note.content)
     )
@@ -223,6 +249,7 @@ def delete_note(
             detail="Note is already deleted",
         )
     chunks_repository.delete_chunks(db, note_id)
+    summaries_repository.delete_summary(db, note_id, clerk_user_id)
     return updated
 
 

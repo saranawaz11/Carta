@@ -1,12 +1,13 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from core.auth import get_current_user_id
 from core.db import get_db
 from schemas import TaskCreate, TaskOut, TaskUpdate
 from services import tasks as tasks_service
+from services.tasks import TaskDateResolutionError
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -25,6 +26,20 @@ def create_task(
     clerk_user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
+    if request.now is not None and request.timezone is not None:
+        try:
+            return tasks_service.create_task_from_text(
+                db,
+                clerk_user_id,
+                request.title,
+                request.now,
+                request.timezone,
+            )
+        except TaskDateResolutionError as error:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(error),
+            ) from error
     return tasks_service.create_task(
         db, clerk_user_id, request.title, request.due_at, request.due_has_time
     )

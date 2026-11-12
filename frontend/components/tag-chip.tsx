@@ -14,12 +14,28 @@ export function tagTone(label: string): string {
   return TAG_TONES[hash % TAG_TONES.length];
 }
 
-export function TagChip({ label }: { label: string }) {
+export function TagChip({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove?: () => void;
+}) {
   return (
     <span
       className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${tagTone(label)}`}
     >
       #{label}
+      {onRemove && (
+        <button
+          type="button"
+          aria-label={`Remove tag ${label}`}
+          onClick={onRemove}
+          className="ml-1 leading-none opacity-60 hover:opacity-100"
+        >
+          ×
+        </button>
+      )}
     </span>
   );
 }

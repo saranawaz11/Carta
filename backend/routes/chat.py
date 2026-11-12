@@ -1,4 +1,5 @@
 import json
+import logging
 from collections.abc import Iterator
 
 from fastapi import APIRouter, BackgroundTasks, Depends
@@ -9,6 +10,8 @@ from core.auth import get_current_user_id
 from core.db import get_db
 from schemas import ChatRequest, ConfirmRequest, ConfirmResponse
 from services import chat as chat_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -27,6 +30,7 @@ def chat(
             for event in events:
                 yield json.dumps(event, ensure_ascii=False) + "\n"
         except Exception:
+            logger.exception("Chat stream failed")
             yield json.dumps({"error": "The assistant failed. Please try again."}) + "\n"
 
     return StreamingResponse(ndjson(), media_type="application/x-ndjson")

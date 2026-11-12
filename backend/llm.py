@@ -1,7 +1,8 @@
+import asyncio
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
-from collections.abc import Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from typing import Annotated, Any, Literal, TypedDict
 from uuid import UUID
 
@@ -19,30 +20,52 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
+from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
+
+from schemas import TaskDateResolution
 
 from core import config
 
 TOP_K = 5
 
 SYSTEM_PROMPT = (
-    "You help the user work with their notes. Use search_notes before proposing "
-    "an update, archive, or delete. If several notes match the user's request, "
-    "ask which note they mean and do not propose an action. Never claim an "
-    "update, archive, or delete is complete before it is executed. When a "
-    "pending action is described below and the user agrees in chat (yes, ok, "
-    "go ahead, etc.), call resolve_pending_action with confirm; if they "
-    "decline, call it with cancel; if unclear, ask briefly. Never propose the "
-    "same action again while one is pending. "
-    "Answer questions only from the user's notes, and do not invent facts or "
-    "sources. You may create notes immediately when asked."
+    "You are Carta AI, an assistant for the user's notes. Format replies in "
+    "Markdown (short paragraphs, bullets, **bold**; ## headings only for long "
+    "answers).\n\n"
+    "Tools: search_notes finds notes; read_note returns a note's full content; "
+    "create_note/create_task make new items; propose_update_note, "
+    "propose_archive_note and propose_delete_note ask the user to confirm a "
+    "change to an EXISTING note (the UI shows Confirm/Cancel buttons).\n\n"
+    "Rules for editing, archiving or deleting an existing note:\n"
+    "1. NEVER call create_note to change an existing note. Creating a note is "
+    "only for when the user asks for a NEW note.\n"
+    "2. Call search_notes with the user's words to find the note. If the user is "
+    "answering your earlier question about which note, use the note they chose "
+    "from the conversation, and search again to get its ID.\n"
+    "3. If exactly one note clearly matches, IMMEDIATELY call the propose_* tool "
+    "- do not ask for confirmation in text, the buttons do that. If several "
+    "match, list their titles and ask which one, without calling propose_*. If "
+    "none match, say so.\n"
+    "4. For an update, first call read_note, then call propose_update_note with "
+    "the note's COMPLETE new title and content (the existing text with the "
+    "requested change applied, nothing lost).\n"
+    "5. After a propose_* call, write one short sentence describing it. Never "
+    "claim the change is done until the user confirms.\n"
+    "6. If the conversation says 'yes'/'go ahead' but no action is pending "
+    "below, redo steps 2-4 for the note being discussed instead of creating a "
+    "note.\n"
+    "When a pending action is described below and the user agrees, call "
+    "resolve_pending_action with confirm; if they decline, cancel. Never propose "
+    "the same action again while one is pending.\n"
+    "Always finish with a short text reply to the user. Answer questions only "
+    "from the user's notes; never invent facts."
 )
 
 CAPTURE_PROMPT = (
     "You handle exactly one short statement from the user, with no conversation "
     "and no follow-up questions. Decide and act with tools: use create_task for "
-    "reminders and to-dos (set due_at when a date or time is stated; set "
-    "due_has_time true only if a time of day was given); use create_note for "
+    "reminders and to-dos; use create_note for "
     "things to remember; for editing, archiving, or deleting an existing note, "
     "first call search_notes, and only if exactly one note clearly matches call "
     "the matching propose_* tool; if zero or several notes match, do not call "
@@ -53,7 +76,152 @@ CAPTURE_PROMPT = (
     "reply with one short sentence."
 )
 
+TASK_DATE_PROMPT = (
+    "Interpret a task title and its optional due date using only the supplied "
+    "task text and the user's current local date, time, and timezone. Return "
+    "date_status='no_date' with the original title unchanged and no due date "
+    "when no date is stated. Return date_status='resolved' only when a stated "
+    "date can be resolved confidently: remove the date phrase from the title, "
+    "preserving all meaningful task text, and return due_at as YYYY-MM-DD for "
+    "date-only values or ISO 8601 with the user's timezone offset when a time "
+    "was stated. Set due_has_time only when the user explicitly gave a time. "
+    "Never invent a time or use today as a default. For an ambiguous or "
+    "unresolvable stated date, return date_status='clarify', no due_at, and a "
+    "brief user-facing message asking for a more specific date; do not guess. "
+    "Interpret 'coming <weekday>' as the next occurrence after today, and "
+    "'next <weekday>' as the occurrence in the following week. A month-only "
+    "or period-only phrase such as 'next month' or 'last week of December' "
+    "means the final calendar day of that period. An unqualified month refers "
+    "to its next upcoming occurrence. If removing the date leaves no meaningful "
+    "task title, ask for clarification."
+)
+
+
+class TaskDateGraphState(TypedDict, total=False):
+    text: str
+    now: str
+    timezone: str
+    resolution: TaskDateResolution
+
+
+def _resolve_task_date_node(state: TaskDateGraphState) -> dict[str, Any]:
+    timezone_name = state["timezone"]
+    current = datetime.fromisoformat(state["now"]).astimezone(
+        ZoneInfo(timezone_name)
+    )
+    model = ChatOpenAI(
+        model=config.OPENAI_CHAT_MODEL,
+        api_key=config.OPENAI_API_KEY or None,
+    ).with_structured_output(TaskDateResolution)
+    resolution = model.invoke(
+        [
+            SystemMessage(TASK_DATE_PROMPT),
+            HumanMessage(
+                f"Current local datetime: {current.isoformat()}\n"
+                f"Timezone: {timezone_name}\n"
+                f"Task text:\n{state['text']}"
+            ),
+        ]
+    )
+    return {"resolution": resolution}
+
+
+def _compile_task_date_graph():
+    graph = StateGraph(TaskDateGraphState)
+    graph.add_node("resolve", _resolve_task_date_node)
+    graph.add_edge(START, "resolve")
+    graph.add_edge("resolve", END)
+    return graph.compile()
+
+
+_task_date_graph = _compile_task_date_graph()
+
+
+def resolve_task_date(
+    text: str, now: str, timezone_name: str
+) -> TaskDateResolution:
+    state = _task_date_graph.invoke(
+        {"text": text, "now": now, "timezone": timezone_name}
+    )
+    resolution = state.get("resolution")
+    if not isinstance(resolution, TaskDateResolution):
+        raise RuntimeError("Task date graph returned no valid resolution")
+    return resolution
+
+
 _splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
+
+
+class TranscriptionConnection:
+    def __init__(self, client: Any, manager: Any, connection: Any) -> None:
+        self._client = client
+        self._manager = manager
+        self._connection = connection
+
+    async def send(self, event: str) -> None:
+        await self._connection.send(json.loads(event))
+
+    def __aiter__(self) -> AsyncIterator[str]:
+        return self._events()
+
+    async def _events(self) -> AsyncIterator[str]:
+        async for event in self._connection:
+            yield json.dumps(
+                event.model_dump(mode="json", by_alias=True, exclude_none=True)
+            )
+
+    async def close(self) -> None:
+        try:
+            await self._manager.__aexit__(None, None, None)
+        finally:
+            await self._client.close()
+
+
+async def open_transcription_session() -> TranscriptionConnection:
+    client = AsyncOpenAI(api_key=config.OPENAI_API_KEY or None)
+    manager = client.realtime.connect(
+        extra_query={"intent": "transcription"},
+    )
+    connection = None
+    try:
+        connection = await asyncio.wait_for(manager.__aenter__(), timeout=10)
+        await connection.send(
+            {
+                "type": "session.update",
+                "session": {
+                    "type": "transcription",
+                    "audio": {
+                        "input": {
+                            "format": {"type": "audio/pcm", "rate": 24000},
+                            "noise_reduction": {"type": "near_field"},
+                            "transcription": {
+                                "model": config.OPENAI_TRANSCRIBE_MODEL,
+                                "prompt": "Transcribe faithfully; do not invent words.",
+                            },
+                            "turn_detection": {
+                                "type": "server_vad",
+                                "threshold": config.VOICE_VAD_THRESHOLD,
+                                "prefix_padding_ms": 300,
+                                "silence_duration_ms": config.VOICE_SILENCE_MS,
+                            },
+                        }
+                    },
+                },
+            }
+        )
+        while True:
+            event = await asyncio.wait_for(connection.recv(), timeout=10)
+            if event.type == "session.updated":
+                return TranscriptionConnection(client, manager, connection)
+            if event.type == "error":
+                raise RuntimeError(f"OpenAI transcription session error: {event}")
+    except BaseException:
+        try:
+            if connection is not None:
+                await manager.__aexit__(None, None, None)
+        finally:
+            await client.close()
+        raise
 
 
 def _embeddings() -> OpenAIEmbeddings:
@@ -96,14 +264,7 @@ class UpdateNoteArgs(BaseModel):
 
 
 class CreateTaskArgs(BaseModel):
-    title: str = Field(description="Short task title")
-    due_at: str | None = Field(
-        default=None,
-        description="Due date/time as ISO 8601, resolved from the current date and timezone",
-    )
-    due_has_time: bool = Field(
-        default=False, description="True only if the user gave a time of day"
-    )
+    pass
 
 
 class NoteIdArgs(BaseModel):
@@ -149,6 +310,18 @@ def search_notes(query: str, config: RunnableConfig) -> str:
     return json.dumps({"results": results})
 
 
+@tool("read_note", args_schema=NoteIdArgs)
+def read_note(note_id: UUID, config: RunnableConfig) -> str:
+    """Return the full title and content of a note."""
+    user_id, configurable = _tool_context(config)
+    note = _callback(configurable, "get_note")(note_id, user_id)
+    if note is None or note.deleted_at is not None:
+        return json.dumps({"error": "Note not found or no longer available."})
+    return json.dumps(
+        {"note": {"note_id": str(note.id), "title": note.title or "", "content": note.content or ""}}
+    )
+
+
 @tool("create_note", args_schema=CreateNoteArgs)
 def create_note(title: str, content: str, config: RunnableConfig) -> str:
     """Create a note immediately and return its ID and title."""
@@ -161,22 +334,23 @@ def create_note(title: str, content: str, config: RunnableConfig) -> str:
 
 
 @tool("create_task", args_schema=CreateTaskArgs)
-def create_task(
-    title: str, due_at: str | None, due_has_time: bool, config: RunnableConfig
-) -> str:
-    """Create a task (reminder or to-do) immediately, with an optional due date."""
+def create_task(config: RunnableConfig) -> str:
+    """Create a task from the original capture statement using its date context."""
     user_id, configurable = _tool_context(config)
     create = _callback(configurable, "create_task")
-    due: datetime | None = None
-    if due_at:
-        try:
-            due = datetime.fromisoformat(due_at)
-        except ValueError:
-            return json.dumps({"error": "due_at must be an ISO 8601 datetime."})
-        if due.tzinfo is None:
-            zone = configurable.get("timezone")
-            due = due.replace(tzinfo=ZoneInfo(zone) if zone else timezone.utc)
-    task = create(title, due, due_has_time, user_id)
+    text = configurable.get("capture_text")
+    now = configurable.get("now")
+    timezone_name = configurable.get("timezone")
+    if not isinstance(text, str) or not isinstance(now, str) or not isinstance(
+        timezone_name, str
+    ):
+        raise RuntimeError("Capture task date context is missing")
+    result = create(
+        text, datetime.fromisoformat(now), timezone_name, user_id
+    )
+    if isinstance(result, dict) and isinstance(result.get("error"), str):
+        return json.dumps({"error": result["error"]})
+    task = result
     return json.dumps(
         {
             "created_task": {
@@ -252,6 +426,7 @@ def resolve_pending_action(decision: str, config: RunnableConfig) -> str:
 
 _TOOLS = [
     search_notes,
+    read_note,
     create_note,
     create_task,
     propose_update_note,
@@ -274,7 +449,11 @@ def _text_content(content: Any) -> str:
 
 
 def _tool_payload(content: Any) -> dict[str, Any]:
-    return json.loads(_text_content(content))
+    try:
+        payload = json.loads(_text_content(content))
+    except ValueError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def _stream_text(message: AIMessageChunk) -> str:
@@ -342,7 +521,7 @@ def _compile_graph(tools=None):
         | model
         | RunnableLambda(lambda response: {"messages": [response]}),
     )
-    graph.add_node("tools", ToolNode(tools))
+    graph.add_node("tools", ToolNode(tools, handle_tool_errors=True))
     graph.add_edge(START, "model")
     graph.add_conditional_edges("model", _route_after_model)
     graph.add_conditional_edges("tools", _route_after_tools)
@@ -403,6 +582,14 @@ def stream_chat_graph(
             resolved = payload.get("resolved")
 
     answer = "".join(answer_parts)
+    last_ai = next(
+        (m for m in reversed(final_state["messages"]) if isinstance(m, AIMessage)),
+        None,
+    )
+    if last_ai is not None and not last_ai.tool_calls:
+        answer = _text_content(last_ai.content) or answer
+    elif pending_action or resolved:
+        answer = ""
     if pending_action and not answer.strip():
         verb = {"update": "update", "archive": "archive", "delete": "delete"}.get(
             pending_action["action"], pending_action["action"]
@@ -415,6 +602,13 @@ def stream_chat_graph(
 
     if resolved and not answer.strip():
         answer = resolved["message"]
+        yield {"token": answer}
+
+    if not answer.strip():
+        answer = (
+            "I couldn't work out which note you mean. Could you give me the "
+            "note's exact title?"
+        )
         yield {"token": answer}
 
     yield {
@@ -432,19 +626,11 @@ def run_capture_graph(
     text: str, now: str, timezone_name: str, configurable: dict[str, Any]
 ) -> dict[str, Any]:
     today = datetime.fromisoformat(now).astimezone(ZoneInfo(timezone_name))
-    upcoming = ", ".join(
-        f"{(today + timedelta(days=n)):%a %Y-%m-%d}" for n in range(1, 15)
-    )
     prompt = (
         f"{CAPTURE_PROMPT}\n\nCurrent datetime: {now}. "
         f"User timezone: {timezone_name}. Today is {today:%A %Y-%m-%d} there. "
-        f"Upcoming dates: {upcoming}. Always copy the date for a weekday or "
-        "relative day from this list, never compute it. Resolve weekdays "
-        "to the next such date "
-        "(a bare weekday is never today; \"next <weekday>\" is the one in the "
-        "following week). "
-        "If no time of day is stated, use date-only due_at (YYYY-MM-DD) and "
-        "due_has_time false."
+        "When creating a task, use the create_task tool without date arguments; "
+        "the backend resolves the original statement's date consistently."
     )
     graph = _compile_graph([t for t in _TOOLS if t is not resolve_pending_action])
     state = graph.invoke(
@@ -452,6 +638,8 @@ def run_capture_graph(
         config={
             "configurable": {
                 **configurable,
+                "capture_text": text,
+                "now": now,
                 "capture_prompt": prompt,
                 "timezone": timezone_name,
             }
@@ -468,13 +656,76 @@ def run_capture_graph(
         if not isinstance(name, str):
             continue
         payload = _tool_payload(message.content)
-        if name == "create_task" and "created_task" in payload:
-            result["task_id"] = payload["created_task"]["task_id"]
+        if name == "create_task":
+            if "created_task" in payload:
+                result["task_id"] = payload["created_task"]["task_id"]
+            elif isinstance(payload.get("error"), str):
+                result["message"] = payload["error"]
+            else:
+                result["message"] = (
+                    "I couldn't create this task. Please try again."
+                )
         elif name == "create_note" and "created_note" in payload:
             result["note_id"] = payload["created_note"]["note_id"]
         elif name.startswith("propose_") and "pending_action" in payload:
             result["pending_action"] = payload["pending_action"]
     last = state["messages"][-1]
-    if isinstance(last, AIMessage):
+    if isinstance(last, AIMessage) and not result["message"]:
         result["message"] = _text_content(last.content)
     return result
+
+
+SUMMARY_PROMPT = (
+    "Summarize the user's note. Be brief: a short overview and at most 5 short "
+    "key points. List a deadline only when the note states an explicit date; "
+    "never invent dates. Resolve relative dates (such as 'next Friday') from the "
+    "current datetime and timezone given. Return due_at as an ISO 8601 datetime "
+    "and set due_has_time true only if the note states a time of day. For "
+    "connections, pick at most 3 of the candidate notes that are truly related "
+    "and give a one-line reason each; use only the candidate ids given, and "
+    "return none if nothing fits."
+)
+
+
+class SummaryDeadline(BaseModel):
+    title: str
+    due_at: str
+    due_has_time: bool = False
+
+
+class SummaryConnection(BaseModel):
+    note_id: str
+    reason: str
+
+
+class NoteSummaryResult(BaseModel):
+    overview: str
+    key_points: list[str]
+    deadlines: list[SummaryDeadline]
+    connections: list[SummaryConnection]
+
+
+def summarize_note(
+    title: str,
+    content: str,
+    now: str,
+    timezone_name: str,
+    candidates: list[dict],
+) -> NoteSummaryResult:
+    model = ChatOpenAI(
+        model=config.OPENAI_CHAT_MODEL, api_key=config.OPENAI_API_KEY or None
+    ).with_structured_output(NoteSummaryResult)
+    listing = "\n".join(
+        f"- id: {c['id']} | title: {c['title']} | snippet: {c['snippet']}"
+        for c in candidates
+    )
+    return model.invoke(
+        [
+            SystemMessage(SUMMARY_PROMPT),
+            HumanMessage(
+                f"Current datetime: {now}\nTimezone: {timezone_name}\n\n"
+                f"Note title: {title}\nNote content:\n{content}\n\n"
+                f"Candidate notes:\n{listing or '(none)'}"
+            ),
+        ]
+    )

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -10,6 +11,7 @@ from repositories import notes as notes_repository
 from repositories import tasks as tasks_repository
 from schemas import CaptureRequest
 from services import embedding, notes as notes_service, tasks as tasks_service
+from services.tasks import TaskDateResolutionError
 
 SYNC_BATCH = 5
 
@@ -25,6 +27,19 @@ def capture(
     ):
         embedding.sync_note(db, note_id)
 
+    def create_capture_task(
+        text: str,
+        now: datetime,
+        timezone_name: str,
+        user_id: str,
+    ):
+        try:
+            return tasks_service.create_task_from_text(
+                db, user_id, text, now, timezone_name
+            )
+        except TaskDateResolutionError as error:
+            return {"error": str(error)}
+
     configurable = {
         "user_id": clerk_user_id,
         "similar_chunks": lambda vector, limit, user_id: (
@@ -33,9 +48,7 @@ def capture(
         "create_note": lambda title, content, user_id: notes_service.create_note(
             db, user_id, background, title=title, content=content
         ),
-        "create_task": lambda title, due_at, due_has_time, user_id: (
-            tasks_service.create_task(db, user_id, title, due_at, due_has_time)
-        ),
+        "create_task": create_capture_task,
         "get_note": lambda note_id, user_id: notes_repository.get_note(
             db, note_id, user_id
         ),

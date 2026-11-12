@@ -12,13 +12,18 @@ export type Note = {
   id: string;
   title: string;
   content: string;
+  tags: string[];
   archived_at: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
-export type NoteChanges = { title?: string; content?: string };
+export type NoteChanges = {
+  title?: string;
+  content?: string;
+  tags?: string[];
+};
 
 const notesPath = "/api/notes";
 const noteKey = (id: string) => `${notesPath}/${id}`;

@@ -18,29 +18,22 @@ import { type Task, useTaskActions, useTasks } from "@/lib/tasks";
 
 const display = Fraunces({ subsets: ["latin"], display: "swap" });
 
-/* ---------- STATIC placeholder ----------
-   Tasks without a due date, and tasks created from the quick-add bar,
-   are due on this day of the current month. Swap for real logic later. */
-const STATIC_DUE_DAY = 9;
-
-function staticDue(): Date {
-  const d = new Date();
-  d.setDate(STATIC_DUE_DAY);
-  d.setHours(12, 0, 0, 0);
-  return d;
-}
-
 /* ---------- date helpers ---------- */
 
-type Item = { task: Task; due: Date; diff: number };
+type Item = { task: Task; due: Date | null; diff: number | null };
+type DatedItem = Item & { due: Date; diff: number };
 
 const DAY = 86_400_000;
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-const dueOf = (task: Task) => (task.due_at ? new Date(task.due_at) : staticDue());
-const dayDiff = (due: Date, now: Date) =>
-  Math.round((startOfDay(due).getTime() - startOfDay(now).getTime()) / DAY);
+const dueOf = (task: Task) => (task.due_at ? new Date(task.due_at) : null);
 
-function dueLabel(task: Task, due: Date, diff: number): string {
+const dayDiff = (due: Date | null, now: Date): number | null =>
+  due
+    ? Math.round((startOfDay(due).getTime() - startOfDay(now).getTime()) / DAY)
+    : null;
+
+function dueLabel(task: Task, due: Date | null, diff: number | null): string {
+  if (!due || diff === null) return "No due date";
   const time = task.due_has_time
     ? due.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
     : null;
@@ -58,7 +51,7 @@ function DueChip({ item, className = "" }: { item: Item; className?: string }) {
   const done = Boolean(task.completed_at);
   const tone = done
     ? "bg-gray-100 text-gray-400"
-    : diff < 0
+    : diff !== null && diff < 0
       ? "bg-red-100 text-red-700"
       : diff === 0
         ? "bg-red-50 text-red-700 ring-1 ring-red-200"
@@ -222,7 +215,7 @@ function DeadlinesCard({
 }: {
   now: Date;
   dots: Map<number, number>;
-  deadlines: Item[];
+  deadlines: DatedItem[];
 }) {
   const year = now.getFullYear();
   const month = now.getMonth();
@@ -309,7 +302,7 @@ export default function TasksPage() {
   const query = rawQuery.toLowerCase();
 
   const { data: tasks, error, isLoading, isValidating, mutate } = useTasks();
-  const { toggle, remove, create } = useTaskActions();
+  const { toggle, remove, createFromText } = useTaskActions();
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -321,7 +314,11 @@ export default function TasksPage() {
       const due = dueOf(task);
       return { task, due, diff: dayDiff(due, now) };
     });
-    const byDue = (a: Item, b: Item) => a.due.getTime() - b.due.getTime();
+    const byDue = (a: Item, b: Item) => {
+      if (!a.due) return b.due ? 1 : 0;
+      if (!b.due) return -1;
+      return a.due.getTime() - b.due.getTime();
+    };
     const open = items.filter((i) => !i.task.completed_at).sort(byDue);
     const done = items
       .filter((i) => i.task.completed_at)
@@ -334,30 +331,41 @@ export default function TasksPage() {
 
     const dots = new Map<number, number>();
     open.forEach((i) => {
-      if (i.due.getMonth() === now.getMonth() && i.due.getFullYear() === now.getFullYear()) {
+      if (
+        i.due &&
+        i.due.getMonth() === now.getMonth() &&
+        i.due.getFullYear() === now.getFullYear()
+      ) {
         dots.set(i.due.getDate(), (dots.get(i.due.getDate()) ?? 0) + 1);
       }
     });
 
-    const overdue = open.filter((i) => i.diff < 0).length;
+    const overdue = open.filter((i) => i.diff !== null && i.diff < 0).length;
     return {
       total: items.length,
       open,
       done,
       overdue,
       onTrack: open.length - overdue,
-      pendingToday: open.filter((i) => i.diff <= 0).length,
-      dueThisWeek: open.filter((i) => i.diff >= 0 && i.diff <= 6).length,
-      urgent: open.filter((i) => i.diff <= 0 && matches(i)),
-      upcoming: open.filter((i) => i.diff > 0 && matches(i)),
+      pendingToday: open.filter((i) => i.diff !== null && i.diff <= 0).length,
+      dueThisWeek: open.filter((i) => i.diff !== null && i.diff >= 0 && i.diff <= 6).length,
+      urgent: open.filter((i) => i.diff !== null && i.diff <= 0 && matches(i)),
+      upcoming: open.filter((i) => i.diff !== null && i.diff > 0 && matches(i)),
+      undated: open.filter((i) => i.diff === null && matches(i)),
       doneList: done.filter(matches),
-      deadlines: open.filter((i) => i.diff >= 0).slice(0, 4),
+      deadlines: open
+        .filter((i): i is DatedItem => i.diff !== null && i.diff >= 0)
+        .slice(0, 4),
       dots,
     };
   }, [tasks, now, query]);
 
   const pct = view.total ? Math.round((view.done.length / view.total) * 100) : 0;
-  const shown = view.urgent.length + view.upcoming.length + view.doneList.length;
+  const shown =
+    view.urgent.length +
+    view.upcoming.length +
+    view.undated.length +
+    view.doneList.length;
 
   async function run(action: () => Promise<unknown>) {
     setActionError(null);
@@ -375,7 +383,7 @@ export default function TasksPage() {
     setAdding(true);
     setActionError(null);
     try {
-      await create(value, staticDue());
+      await createFromText(value);
       setTitle("");
     } catch (cause) {
       setActionError(cause instanceof Error ? cause.message : "Unable to add task");
@@ -535,6 +543,22 @@ export default function TasksPage() {
                 <TaskGroup title="Upcoming" count={view.upcoming.length}>
                   <ul className="flex flex-col gap-2">
                     {view.upcoming.map((item, i) => (
+                      <TaskRow
+                        key={item.task.id}
+                        item={item}
+                        index={i}
+                        onToggle={() => void run(() => toggle(item.task))}
+                        onRemove={() => void run(() => remove(item.task))}
+                      />
+                    ))}
+                  </ul>
+                </TaskGroup>
+              )}
+
+              {view.undated.length > 0 && (
+                <TaskGroup title="No due date" count={view.undated.length}>
+                  <ul className="flex flex-col gap-2">
+                    {view.undated.map((item, i) => (
                       <TaskRow
                         key={item.task.id}
                         item={item}

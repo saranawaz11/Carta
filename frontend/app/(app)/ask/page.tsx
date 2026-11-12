@@ -8,6 +8,7 @@ import { useSWRConfig } from "swr";
 import { ArrowUp, ArrowUpRight, FileText, Loader2, Sparkles } from "lucide-react";
 
 import { ActionCard, type PendingAction } from "@/components/action-card";
+import { Markdown } from "@/components/markdown";
 import { apiFetch } from "@/lib/api";
 import { invalidateNotes } from "@/lib/notes";
 
@@ -37,7 +38,7 @@ type ConfirmResponse = {
 
 function AssistantAvatar() {
   return (
-    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-red-700 text-white shadow-sm">
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-button text-white shadow-sm">
       <Sparkles size={16} />
     </span>
   );
@@ -48,7 +49,7 @@ function UserAvatar({ imageUrl, name }: { imageUrl?: string; name?: string | nul
     // eslint-disable-next-line @next/next/no-img-element
     <img src={imageUrl} alt="" className="size-8 shrink-0 rounded-full object-cover" />
   ) : (
-    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-red-200 text-xs font-semibold text-brand">
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-tint text-xs font-semibold text-brand ring-1 ring-line-strong">
       {name?.[0]?.toUpperCase() ?? "U"}
     </span>
   );
@@ -62,7 +63,7 @@ function TypingDots() {
         <span
           key={i}
           style={{ animationDelay: `${i * 150}ms` }}
-          className="size-1.5 animate-bounce rounded-full bg-red-400"
+          className="size-1.5 animate-bounce rounded-full bg-brand/70"
         />
       ))}
     </span>
@@ -225,10 +226,13 @@ export default function AskPage() {
         {
           role: "assistant",
           content: result.message,
-          created_note: {
-            note_id: result.note.id,
-            title: result.note.title || "Untitled",
-          },
+          created_note:
+            action.action === "delete"
+              ? undefined
+              : {
+                  note_id: result.note.id,
+                  title: result.note.title || "Untitled",
+                },
         },
       ]);
     } catch (cause) {
@@ -251,13 +255,11 @@ export default function AskPage() {
     <div className="relative mx-auto flex min-h-[calc(100dvh-9rem)] w-full max-w-3xl flex-col md:min-h-full">
       {/* Header */}
       <header className="mb-8 flex flex-col gap-3 motion-safe:animate-fade-up">
-        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-red-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-red-700">
+        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-tint px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-brand">
           <Sparkles size={12} />
           Grounded in your notes
         </span>
-        <h1
-          className={`${display.className} text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl`}
-        >
+        <h1 className={`${display.className} text-4xl font-semibold tracking-tight text-ink sm:text-5xl`}>
           Ask Carta AI
         </h1>
         <p className="max-w-xl text-sm leading-relaxed text-gray-600 sm:text-base">
@@ -269,13 +271,11 @@ export default function AskPage() {
       {/* Conversation */}
       <div className="flex-1">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-red-200 py-14 text-center motion-safe:animate-fade-up">
-            <span className="flex size-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line-strong py-14 text-center motion-safe:animate-fade-up">
+            <span className="flex size-12 items-center justify-center rounded-full bg-tint text-brand">
               <Sparkles size={22} />
             </span>
-            <p className="text-sm text-gray-500">
-              Start a conversation by asking about your notes.
-            </p>
+            <p className="text-sm text-gray-500">Start a conversation by asking about your notes.</p>
           </div>
         ) : (
           <ul className="flex flex-col gap-6">
@@ -286,11 +286,8 @@ export default function AskPage() {
 
               if (message.role === "user") {
                 return (
-                  <li
-                    key={index}
-                    className="flex items-start justify-end gap-3 motion-safe:animate-fade-up"
-                  >
-                    <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-md bg-red-700 px-4 py-3 text-sm leading-relaxed text-white shadow-sm">
+                  <li key={index} className="flex items-start justify-end gap-3 motion-safe:animate-fade-up">
+                    <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-md bg-button px-4 py-3 text-sm leading-relaxed text-white shadow-sm">
                       {message.content}
                     </p>
                     <UserAvatar imageUrl={user?.imageUrl} name={user?.firstName} />
@@ -303,13 +300,11 @@ export default function AskPage() {
                   <AssistantAvatar />
                   <div className="flex min-w-0 flex-1 flex-col gap-4">
                     {(message.content || thinking) && (
-                      <div className="rounded-2xl rounded-tl-md border border-red-100 bg-panel px-5 py-4 shadow-sm">
+                      <div className="rounded-2xl rounded-tl-md border border-line bg-panel px-5 py-4 shadow-sm">
                         {thinking ? (
                           <TypingDots />
                         ) : (
-                          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-800">
-                            {message.content}
-                          </p>
+                          <Markdown>{message.content}</Markdown>
                         )}
                       </div>
                     )}
@@ -325,19 +320,19 @@ export default function AskPage() {
                             <li key={source.note_id} className="min-w-0">
                               <Link
                                 href={`/notes/${source.note_id}`}
-                                className="group/source flex min-w-0 items-center gap-3 rounded-xl border border-red-100 bg-panel p-3
+                                className="group/source flex min-w-0 items-center gap-3 rounded-xl border border-line bg-panel p-3
                                   transition-[transform,border-color,box-shadow] duration-200
-                                  hover:-translate-y-0.5 hover:border-red-300 hover:shadow-md hover:shadow-red-100/60"
+                                  hover:-translate-y-0.5 hover:border-line-strong hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/30"
                               >
-                                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-tint text-brand">
                                   <FileText size={16} />
                                 </span>
-                                <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-800 transition-colors group-hover/source:text-red-700">
+                                <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink transition-colors group-hover/source:text-brand">
                                   {source.title || "Untitled"}
                                 </span>
                                 <ArrowUpRight
                                   size={14}
-                                  className="shrink-0 text-gray-400 transition-colors group-hover/source:text-red-600"
+                                  className="shrink-0 text-gray-400 transition-colors group-hover/source:text-brand"
                                 />
                               </Link>
                             </li>
@@ -349,22 +344,22 @@ export default function AskPage() {
                     {message.created_note && (
                       <Link
                         href={`/notes/${message.created_note.note_id}`}
-                        className="group/created flex min-w-0 items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-3
+                        className="group/created flex min-w-0 items-center gap-3 rounded-xl border border-line-strong bg-tint p-3
                           transition-[transform,border-color,box-shadow] duration-200
-                          hover:-translate-y-0.5 hover:border-red-300 hover:shadow-md hover:shadow-red-100/60"
+                          hover:-translate-y-0.5 hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/30"
                       >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-panel text-red-600">
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-panel text-brand">
                           <FileText size={16} />
                         </span>
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate text-sm font-medium text-gray-900">
+                          <span className="truncate text-sm font-medium text-ink">
                             {message.created_note.title}
                           </span>
                           <span className="text-xs text-gray-500">Open note</span>
                         </span>
                         <ArrowUpRight
                           size={14}
-                          className="shrink-0 text-red-500 transition-transform duration-200 group-hover/created:translate-x-0.5 group-hover/created:-translate-y-0.5"
+                          className="shrink-0 text-brand transition-transform duration-200 group-hover/created:-translate-y-0.5 group-hover/created:translate-x-0.5"
                         />
                       </Link>
                     )}
@@ -374,15 +369,11 @@ export default function AskPage() {
                         action={message.pending_action}
                         disabled={confirmingIndex !== null}
                         confirming={confirmingIndex === index}
-                        onConfirm={() =>
-                          void confirmAction(message.pending_action!, index)
-                        }
+                        onConfirm={() => void confirmAction(message.pending_action!, index)}
                         onCancel={() =>
                           setMessages((current) =>
                             current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, pending_action: null }
-                                : item,
+                              itemIndex === index ? { ...item, pending_action: null } : item,
                             ),
                           )
                         }
@@ -398,11 +389,11 @@ export default function AskPage() {
       </div>
 
       {/* Composer */}
-      <div className="sticky bottom-0 -mb-4 mt-6 bg-gradient-to-t from-[#fef9f9] via-[#fef9f9]/95 to-transparent pb-4 pt-6 sm:-mb-6 sm:pb-6">
+      <div className="sticky bottom-0 -mb-4 mt-6 bg-gradient-to-t from-page via-page/95 to-transparent pb-4 pt-6 sm:-mb-6 sm:pb-6">
         {error && (
           <p
             role="alert"
-            className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700 motion-safe:animate-fade-up"
+            className="mb-3 rounded-xl border border-line-strong bg-tint px-4 py-2.5 text-sm text-brand motion-safe:animate-fade-up"
           >
             {error}
           </p>
@@ -412,23 +403,23 @@ export default function AskPage() {
             event.preventDefault();
             void handleSend();
           }}
-          className="flex items-center gap-2 rounded-full border border-red-100 bg-panel p-1.5 pl-5 shadow-lg shadow-red-100/50
-            transition-[border-color,box-shadow] duration-200 focus-within:border-red-300 focus-within:ring-4 focus-within:ring-red-100"
+          className="flex items-center gap-2 rounded-full border border-line bg-panel p-1.5 pl-5 shadow-lg shadow-black/5 dark:shadow-black/40
+            transition-[border-color,box-shadow] duration-200 focus-within:border-brand/50 focus-within:ring-4 focus-within:ring-brand/15"
         >
           <input
             value={input}
             onChange={(event) => setInput(event.target.value)}
             placeholder="Ask about your notes"
             aria-label="Ask about your notes"
-            className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+            className="h-10 min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-gray-400"
           />
           <button
             type="submit"
             disabled={loading || !input.trim()}
             aria-label="Send"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-700 text-white
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-button text-white
               transition-[transform,background-color,opacity] duration-200
-              hover:bg-red-800 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              hover:bg-button-hover active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? <Loader2 size={18} className="animate-spin" /> : <ArrowUp size={18} />}
           </button>

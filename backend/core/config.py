@@ -23,4 +23,8 @@ OPENAI_EMBEDDING_MODEL = os.environ.get(
     "OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"
 )
 OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-4o-mini")
-
+OPENAI_TRANSCRIBE_MODEL = os.environ.get(
+    "OPENAI_TRANSCRIBE_MODEL", "gpt-4o-transcribe"
+)
+VOICE_VAD_THRESHOLD = float(os.environ.get("VOICE_VAD_THRESHOLD", "0.4"))
+VOICE_SILENCE_MS = int(os.environ.get("VOICE_SILENCE_MS", "1000"))

@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { UserButton, useClerk, useUser } from "@clerk/nextjs";
-import { useTheme } from "next-themes";
 import {
   type ReactNode,
   type TouchEvent,
@@ -18,15 +17,11 @@ import {
   CircleCheck,
   LogOut,
   Menu,
-  Monitor,
-  Moon,
   PanelLeftClose,
   PanelLeftOpen,
-  Plus,
   Settings,
   Sparkles,
   SquareText,
-  Sun,
   Trash,
   UserRound,
   X,
@@ -34,9 +29,6 @@ import {
 } from "lucide-react";
 
 import { QuickCapture } from "@/components/quick-capture";
-import { ThemeToggle } from "@/components/home-page-components/theme-toggle";
-import { Button } from "@/components/ui/button";
-import { useNoteActions } from "@/lib/notes";
 import logo from "@/public/assets/logo.png";
 
 const STORAGE_KEY = "sidebar-collapsed";
@@ -50,8 +42,8 @@ const navItems = [
 ];
 
 const footerItems = [
-  { href: "/profile", label: "Profile", icon: UserRound },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/profile", label: "Profile", icon: UserRound },
 ];
 
 // Clerk's account menu follows the theme tokens
@@ -139,46 +131,21 @@ function NavItem({
   );
 }
 
-/** Collapsed rail: one button that cycles light, dark, system */
-function ThemeCycle({ className = "" }: { className?: string }) {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  const order = ["light", "dark", "system"] as const;
-  const current = mounted ? (theme ?? "system") : "system";
-  const next = order[(order.indexOf(current as (typeof order)[number]) + 1) % order.length];
-  const Icon = current === "dark" ? Moon : current === "light" ? Sun : Monitor;
-
-  return (
-    <button
-      type="button"
-      onClick={() => setTheme(next)}
-      aria-label={`Theme: ${current}. Switch to ${next}`}
-      title={`Theme: ${current}`}
-      className={`mx-auto size-10 items-center justify-center rounded-lg text-gray-600 transition-colors duration-200 hover:bg-red-200/80 hover:text-red-700 dark:hover:bg-white/[0.07] dark:hover:text-brand ${className}`}
-    >
-      <Icon size={20} />
-    </button>
-  );
-}
-
 export function Sidebar() {
-  const router = useRouter();
   const pathname = usePathname();
-  const { createNote } = useNoteActions();
   const { user } = useUser();
   const { signOut } = useClerk();
 
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const isTablet = useMediaQuery("(min-width: 768px) and (max-width: 1023px)");
 
-  const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<boolean | null>(null); // the user's own choice, if they made one
   const [mobileOpen, setMobileOpen] = useState(false); // mobile drawer
 
   // Tablets start as a slim rail; a saved choice always wins
   const collapsed = saved ?? isTablet;
+  // The slim rail only exists on desktop widths; on mobile the drawer is always full
+  const railed = collapsed && isDesktop;
 
   const menuButton = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -236,18 +203,8 @@ export function Sidebar() {
     }
   }
 
-  async function handleCreateNote() {
-    setError(null);
-    try {
-      const note = await createNote();
-      router.push(`/notes/${note.id}`);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to create note");
-    }
-  }
-
   async function handleSignOut() {
-    await signOut({ redirectUrl: "/sign-in" });
+    await signOut({ redirectUrl: "/" });
   }
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
@@ -255,7 +212,7 @@ export function Sidebar() {
   return (
     <div className="flex md:shrink-0">
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-30 flex min-h-14 w-full shrink-0 items-center justify-between border-b border-line bg-red-100 px-4 pt-[env(safe-area-inset-top)] md:hidden">
+      <header className="sticky top-0 z-30 flex min-h-14 w-full shrink-0 items-center justify-between border-b border-line bg-sidenav-bar px-4 pt-[env(safe-area-inset-top)] md:hidden">
         <Link href="/" className="flex items-center gap-2">
           <Image src={logo} alt="Carta Logo" width={30} height={30} />
           <span className="text-xl font-medium">Carta</span>
@@ -289,12 +246,13 @@ export function Sidebar() {
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         className={`group/sidebar fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] max-w-[85vw] flex-col justify-between
-          overflow-y-auto overflow-x-hidden overscroll-contain border-r border-[var(--carta-line)] bg-[var(--carta-surface)] p-4
+          overflow-y-auto overflow-x-hidden overscroll-contain border-r border-line bg-sidenav p-4
           pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]
           transition-[transform,width,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
           md:sticky md:top-0 md:z-auto md:w-[260px] md:max-w-none md:translate-x-0 md:shrink-0 md:overscroll-auto md:pt-4
-          md:data-[collapsed=true]:w-[72px] md:data-[collapsed=true]:px-3`}
+          md:data-[collapsed=true]:w-[73px] md:data-[collapsed=true]:px-3
+          md:data-[collapsed=true]:[scrollbar-width:none] md:data-[collapsed=true]:[&::-webkit-scrollbar]:hidden`}
       >
         <div className="flex w-full flex-col gap-4">
           {/* Header */}
@@ -332,26 +290,9 @@ export function Sidebar() {
             </button>
           </div>
 
-          <div className="md:group-data-[collapsed=true]/sidebar:hidden">
-            <QuickCapture />
-          </div>
-
-          {/* Icon always sits 14px from the left edge → centered in the 48px collapsed width */}
-          {/* <Button
-            type="button"
-            onClick={handleCreateNote}
-            title="Create Note"
-            className="h-11 w-full bg-black px-[10px] text-white hover:bg-gray-800 dark:bg-ink dark:text-page dark:hover:bg-ink/85 md:h-10"
-          >
-            <Plus size={20} className="shrink-0" />
-            <Label>
-              <span className="block">Create Note</span>
-            </Label>
-          </Button> */}
-
           {/* Nav */}
           <nav aria-label="Notes">
-            <ul className="flex flex-col gap-1 pt-2">
+            <ul className="flex flex-col gap-1">
               {navItems.map((item) => (
                 <li key={item.href}>
                   <NavItem {...item} active={isActive(item.href)} />
@@ -360,16 +301,26 @@ export function Sidebar() {
             </ul>
           </nav>
 
-          {error && (
-            <p role="alert" className="text-sm text-red-700 dark:text-brand">
-              {error}
-            </p>
-          )}
+          {/*
+            Line, then Quick Capture. Collapsing the rail folds this whole block away
+            (height and fade), and `inert` keeps its fields out of the tab order while hidden.
+          */}
+          <div
+            inert={railed}
+            className="grid grid-rows-[1fr] opacity-100 transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none
+              md:group-data-[collapsed=true]/sidebar:pointer-events-none md:group-data-[collapsed=true]/sidebar:grid-rows-[0fr] md:group-data-[collapsed=true]/sidebar:opacity-0"
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div className="border-t border-line pt-4">
+                <QuickCapture />
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Bottom: profile, settings, theme, account */}
+        {/* Line, then Settings, Profile and the user card */}
         <div className="mt-4 flex w-full flex-col gap-3">
-          <div className="flex flex-col gap-1 border-t border-line pt-3">
+          <div className="border-t border-line pt-3">
             <nav aria-label="Account">
               <ul className="flex flex-col gap-1">
                 {footerItems.map((item) => (
@@ -379,21 +330,18 @@ export function Sidebar() {
                 ))}
               </ul>
             </nav>
-
-            <div className="flex items-center justify-between px-[14px] py-1 md:group-data-[collapsed=true]/sidebar:hidden">
-              <span className="text-xs text-gray-500">Theme</span>
-              <ThemeToggle />
-            </div>
-            <ThemeCycle className="hidden md:group-data-[collapsed=true]/sidebar:flex" />
           </div>
 
           {/* User card */}
           <div
             className="mb-2 flex w-full items-center justify-between rounded-lg bg-panel px-3 py-2
-              md:group-data-[collapsed=true]/sidebar:flex-col md:group-data-[collapsed=true]/sidebar:gap-2 md:group-data-[collapsed=true]/sidebar:px-0"
+              md:group-data-[collapsed=true]/sidebar:flex-col md:group-data-[collapsed=true]/sidebar:gap-1
+              md:group-data-[collapsed=true]/sidebar:px-0 md:group-data-[collapsed=true]/sidebar:py-1.5"
           >
             <div className="flex min-w-0 items-center">
-              <UserButton appearance={userButtonAppearance} />
+              <span className="flex shrink-0 items-center justify-center md:group-data-[collapsed=true]/sidebar:size-9">
+                <UserButton appearance={userButtonAppearance} />
+              </span>
               <Label>
                 <span className="flex flex-col pl-2 text-sm">
                   <span className="truncate">{user?.fullName ?? "Unknown User"}</span>

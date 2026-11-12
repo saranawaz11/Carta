@@ -24,15 +24,13 @@ def _get_jwks_client() -> PyJWKClient:
     return _jwks_client
 
 
-def get_current_user_id(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-) -> str:
-    if credentials is None or not config.CLERK_ISSUER:
+def verify_clerk_token(token: str) -> str:
+    if not token or not config.CLERK_ISSUER:
         raise _unauthorized()
     try:
-        key = _get_jwks_client().get_signing_key_from_jwt(credentials.credentials)
+        key = _get_jwks_client().get_signing_key_from_jwt(token)
         claims = jwt.decode(
-            credentials.credentials,
+            token,
             key.key,
             algorithms=["RS256"],
             issuer=config.CLERK_ISSUER,
@@ -44,3 +42,11 @@ def get_current_user_id(
     if azp and azp not in config.CLERK_AUTHORIZED_PARTIES:
         raise _unauthorized()
     return claims["sub"]
+
+
+def get_current_user_id(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> str:
+    if credentials is None:
+        raise _unauthorized()
+    return verify_clerk_token(credentials.credentials)

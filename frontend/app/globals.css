@@ -53,6 +53,10 @@
   --carta-wine-soft: oklch(88.5% 0.062 18.334);
   --carta-button: #991b2b;
   --carta-button-hover: #7f1d1d;
+
+  /* Sidebar rail, and the top bar that opens it on phones */
+  --carta-sidenav: #fffaf8;
+  --carta-sidenav-bar: var(--color-red-100, oklch(93.6% 0.032 17.717));
 }
 
 .dark {
@@ -99,6 +103,9 @@
   --carta-wine-soft: oklch(88.5% 0.062 18.334);
   --carta-button: #991b2b;
   --carta-button-hover: #7f1d1d;
+
+  --carta-sidenav: #171111;
+  --carta-sidenav-bar: #1a1213;
 
   /* Re-point the stock palette so existing gray-* and light red/orange classes flip with no edits.
      Deep reds (red-600/800/900) are left alone: they are button fills with white text. */
@@ -154,6 +161,8 @@
   --color-wine-soft: var(--carta-wine-soft);
   --color-button: var(--carta-button);
   --color-button-hover: var(--carta-button-hover);
+  --color-sidenav: var(--carta-sidenav);
+  --color-sidenav-bar: var(--carta-sidenav-bar);
 }
 
 @layer base {

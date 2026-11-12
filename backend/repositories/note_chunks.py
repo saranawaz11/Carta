@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm import Session
 
 from models import Note, NoteChunk
@@ -33,7 +34,11 @@ def replace_chunks(
         db.execute(
             update(Note)
             .where(Note.id == note_id)
-            .values(content_hash=content_hash, embedded_hash=content_hash)
+            .values(
+                content_hash=content_hash,
+                embedded_hash=content_hash,
+                updated_at=Note.updated_at,
+            )
         )
         db.commit()
     except Exception:
@@ -43,7 +48,8 @@ def replace_chunks(
 
 def delete_chunks(db: Session, note_id: UUID) -> None:
     db.execute(delete(NoteChunk).where(NoteChunk.note_id == note_id))
-    db.execute(update(Note).where(Note.id == note_id).values(embedded_hash=None))
+    db.execute(update(Note).where(Note.id == note_id).values(embedded_hash=None, updated_at=Note.updated_at)
+    )
     db.commit()
 
 
@@ -61,6 +67,31 @@ def similar_chunks(
         {"content": content, "note_id": note_id, "title": title}
         for content, note_id, title in rows
     ]
+
+
+def similar_notes(
+    db: Session, note_id: UUID, clerk_user_id: str, limit: int = 3
+) -> list[dict]:
+    """Other live, unarchived notes closest to this note's own chunk vectors."""
+    own = aliased(NoteChunk)
+    other = aliased(NoteChunk)
+    distance = func.min(other.embedding.cosine_distance(own.embedding))
+    rows = db.execute(
+        select(Note.id, Note.title, Note.content)
+        .select_from(other)
+        .join(own, (own.note_id == note_id) & (own.clerk_user_id == clerk_user_id))
+        .join(Note, Note.id == other.note_id)
+        .where(
+            other.clerk_user_id == clerk_user_id,
+            other.note_id != note_id,
+            Note.deleted_at.is_(None),
+            Note.archived_at.is_(None),
+        )
+        .group_by(Note.id)
+        .order_by(distance)
+        .limit(limit)
+    )
+    return [{"id": id_, "title": title, "content": content} for id_, title, content in rows]
 
 
 def notes_needing_sync(db: Session, clerk_user_id: str, limit: int) -> list[UUID]:

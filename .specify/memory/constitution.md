@@ -22,7 +22,7 @@ Follow-up TODOs: ratification date; amendment procedure; compliance review expec
 - OpenAI is called only from the backend.
 
 ### III. API and Backend Boundaries
-- The frontend communicates only with the FastAPI REST API, never directly with the database or LLM.
+- The frontend communicates only with the FastAPI backend, using REST endpoints, plus WebSocket endpoints only for live voice transcription, which must verify the Clerk session token before doing any work; never directly with the database or LLM.
 - Backend layers are routes -> services -> data access; routes contain no business logic.
 - LLM calls are kept in one dedicated module.
 
@@ -56,4 +56,4 @@ Follow-up TODOs: ratification date; amendment procedure; compliance review expec
 - Versioning: MAJOR for incompatible removals or redefinitions; MINOR for new or materially expanded principles; PATCH for clarifications and non-semantic refinements.
 - Compliance review expectations: TBD.
 
-**Version**: 1.0.0 | **Ratified**: TBD | **Last Amended**: 2026-10-06
+**Version**: 1.1.0 | **Ratified**: TBD | **Last Amended**: 2026-10-14

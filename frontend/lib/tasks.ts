@@ -92,7 +92,7 @@ export function useTaskActions() {
     [getToken, mutate],
   );
 
-    const create = useCallback(
+  const create = useCallback(
     async (title: string, dueAt?: Date) => {
       await mutate<Task[]>(
         tasksKey,
@@ -113,6 +113,26 @@ export function useTaskActions() {
     [getToken, mutate],
   );
 
-  return { toggle, remove, create };
+  const createFromText = useCallback(
+    async (text: string) => {
+      await mutate<Task[]>(
+        tasksKey,
+        async (current) => {
+          const created = await apiFetch<Task>(tasksKey, getToken, {
+            method: "POST",
+            body: {
+              title: text,
+              now: new Date().toISOString(),
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            },
+          });
+          return [created, ...(current ?? [])];
+        },
+        { revalidate: false },
+      );
+    },
+    [getToken, mutate],
+  );
 
+  return { toggle, remove, create, createFromText };
 }

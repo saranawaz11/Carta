@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fraunces } from "next/font/google";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  type DragEvent,
   type ReactNode,
   useCallback,
   useEffect,
@@ -14,19 +15,22 @@ import {
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+  Archive,
   Check,
   ChevronDown,
   FileText,
   LayoutGrid,
   List,
   Loader2,
-  MoreHorizontal,
   PenLine,
   Pin,
+  RotateCcw,
+  Trash2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Note, NoteStatus, useNoteActions, useNotes } from "@/lib/notes";
+import { useFolderNotes, noteDragMime } from "@/lib/folders";
 import { useDismiss } from "@/lib/use-dismiss";
 
 const display = Fraunces({ subsets: ["latin"], display: "swap", axes: ["opsz"] });
@@ -120,10 +124,25 @@ function sortNotes(notes: Note[], sort: Sort, floatPinned: boolean) {
 
 /* ---------- Pieces ---------- */
 
-function NoteActions({ note }: { note: Note }) {
-  const { restoreNote, purgeNote } = useNoteActions();
+/* Hover actions shared by grid cards and list rows.
+ * Active notes can be archived; archived and trashed notes can be restored.
+ * Delete moves a note to Trash, or removes it for good when it is already in Trash. */
+function NoteQuickActions({
+  note,
+  status,
+  className = "",
+  revealOnHover = true,
+}: {
+  note: Note;
+  status: NoteStatus;
+  className?: string;
+  revealOnHover?: boolean;
+}) {
+  const { archiveNote, restoreNote, deleteNote, purgeNote } = useNoteActions();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const label = note.title.trim() || "Untitled";
+  const inTrash = status === "deleted";
 
   async function run(action: (note: Note) => Promise<unknown>) {
     setPending(true);
@@ -137,99 +156,53 @@ function NoteActions({ note }: { note: Note }) {
     }
   }
 
+  const button =
+    "flex size-8 items-center justify-center rounded-lg text-gray-600 transition-colors duration-150 hover:bg-tint hover:text-brand focus-visible:ring-2 focus-visible:ring-red-300 outline-none disabled:opacity-50";
+  const visibility =
+    error || !revealOnHover
+      ? "opacity-100"
+      : "opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100";
+
   return (
-    <div className="flex flex-col gap-2 border-t border-line px-5 py-3">
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => void run(restoreNote)}>
-          Restore
-        </Button>
-        <Button type="button" size="sm" variant="destructive" disabled={pending} onClick={() => void run(purgeNote)}>
-          Delete permanently
-        </Button>
-      </div>
+    <div className={`flex items-center gap-1 transition-opacity duration-200 ${visibility} ${className}`}>
       {error && (
-        <p role="alert" className="text-xs text-red-600 dark:text-brand">
+        <span role="alert" className="px-1 text-[11px] text-red-700 dark:text-brand">
           {error}
-        </p>
+        </span>
       )}
-    </div>
-  );
-}
-
-/** The "..." menu on list rows */
-function RowMenu({ note, status }: { note: Note; status: NoteStatus }) {
-  const { restoreNote, purgeNote } = useNoteActions();
-  const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const close = useCallback(() => setOpen(false), []);
-  const ref = useDismiss(open, close);
-
-  async function run(action: (note: Note) => Promise<unknown>) {
-    setPending(true);
-    setError(null);
-    try {
-      await action(note);
-      setOpen(false);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to update note");
-    } finally {
-      setPending(false);
-    }
-  }
-
-  const item =
-    "flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs text-gray-700 outline-none transition-colors duration-150 hover:bg-tint/60 focus-visible:ring-2 focus-visible:ring-red-300 disabled:opacity-50";
-
-  return (
-    <div ref={ref} className="relative justify-self-end">
+      {status === "active" ? (
+        <button
+          type="button"
+          title="Archive"
+          aria-label={`Archive ${label}`}
+          disabled={pending}
+          onClick={() => void run(archiveNote)}
+          className={button}
+        >
+          <Archive size={15} />
+        </button>
+      ) : (
+        <button
+          type="button"
+          title="Restore"
+          aria-label={`Restore ${label}`}
+          disabled={pending}
+          onClick={() => void run(restoreNote)}
+          className={button}
+        >
+          <RotateCcw size={15} />
+        </button>
+      )}
       <button
         type="button"
-        aria-label={`More actions for ${note.title.trim() || "Untitled"}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="flex size-9 items-center justify-center rounded-lg text-gray-500 transition-colors duration-200 hover:bg-tint hover:text-brand"
+        title={inTrash ? "Delete permanently" : "Delete"}
+        aria-label={`${inTrash ? "Delete permanently" : "Delete"} ${label}`}
+        disabled={pending}
+        onClick={() => void run(inTrash ? purgeNote : deleteNote)}
+        className={`${button} hover:bg-red-50 hover:text-red-700 dark:hover:text-brand`}
       >
-        <MoreHorizontal size={16} />
+        <Trash2 size={15} />
       </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            role="menu"
-            initial={{ opacity: 0, y: -4, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.97 }}
-            transition={{ duration: 0.15, ease }}
-            className="absolute right-0 top-full z-20 mt-1 w-48 origin-top-right rounded-xl border border-line-strong bg-panel p-1.5 shadow-2xl shadow-black/20"
-          >
-            <Link href={`/notes/${note.id}`} role="menuitem" className={item}>
-              Open note
-            </Link>
-            {status === "deleted" && (
-              <>
-                <button type="button" role="menuitem" disabled={pending} onClick={() => void run(restoreNote)} className={item}>
-                  Restore
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  disabled={pending}
-                  onClick={() => void run(purgeNote)}
-                  className={`${item} text-red-700 dark:text-brand`}
-                >
-                  Delete permanently
-                </button>
-              </>
-            )}
-            {error && (
-              <p role="alert" className="px-2.5 pb-1 pt-1.5 text-[11px] text-red-700 dark:text-brand">
-                {error}
-              </p>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -351,6 +324,17 @@ function SkeletonGrid() {
   );
 }
 
+function noteDragProps(note: Note, status: NoteStatus) {
+  if (status === "deleted" || note.deleted_at) return {};
+  return {
+    draggable: true,
+    onDragStart: (e: DragEvent<HTMLLIElement>) => {
+      e.dataTransfer.setData(noteDragMime, note.id);
+      e.dataTransfer.effectAllowed = "move";
+    },
+  };
+}
+
 function GridView({ notes, status }: { notes: Note[]; status: NoteStatus }) {
   return (
     <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -360,13 +344,14 @@ function GridView({ notes, status }: { notes: Note[]; status: NoteStatus }) {
           <li
             key={note.id}
             style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+            {...noteDragProps(note, status)}
             className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-sm
               transition-[transform,box-shadow,border-color] duration-300 ease-out motion-safe:animate-fade-up
               hover:-translate-y-0.5 hover:border-red-300 hover:shadow-lg hover:shadow-red-900/5"
           >
             <Link
               href={`/notes/${note.id}`}
-              className="flex flex-1 flex-col gap-2 p-5 outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+              className="flex flex-1 flex-col gap-2 px-5 pt-5 pb-2 outline-none focus-visible:ring-2 focus-visible:ring-red-300"
             >
               <div className="flex items-start justify-between gap-2">
                 <h2
@@ -381,14 +366,15 @@ function GridView({ notes, status }: { notes: Note[]; status: NoteStatus }) {
               ) : (
                 <p className="text-sm italic text-gray-400">Empty note</p>
               )}
-              {(d.collection || d.updated) && (
-                <div className="mt-auto flex items-center justify-between gap-3 pt-3 text-[11px]">
-                  <span className="truncate text-brand">{d.collection}</span>
-                  {d.updated && <span className="shrink-0 text-gray-500">{stamp(d.updated)}</span>}
-                </div>
-              )}
             </Link>
-            {status === "deleted" && <NoteActions note={note} />}
+            <div className="mt-auto flex items-center justify-between gap-3 px-5 pt-1 pb-4 text-[11px]">
+              <span className="min-w-0 truncate text-brand">{d.collection}</span>
+              <div className="flex shrink-0 items-center gap-2">
+                                <NoteQuickActions note={note} status={status} />
+
+                {d.updated && <span className="text-gray-500">{stamp(d.updated)}</span>}
+              </div>
+            </div>
           </li>
         );
       })}
@@ -407,8 +393,8 @@ function ListView({
 }) {
   const showCollection = notes.some((n) => details(n).collection);
   const cols = showCollection
-    ? "md:grid-cols-[minmax(0,1fr)_160px_160px_40px]"
-    : "md:grid-cols-[minmax(0,1fr)_160px_40px]";
+    ? "md:grid-cols-[minmax(0,1fr)_160px_160px_auto]"
+    : "md:grid-cols-[minmax(0,1fr)_160px_auto]";
   const label = "font-mono text-[9px] uppercase tracking-[0.18em] text-gray-500";
 
   return (
@@ -427,6 +413,7 @@ function ListView({
             <li
               key={note.id}
               style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+              {...noteDragProps(note, status)}
               className={`group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b border-line px-5 py-4 transition-colors duration-200
                 last:border-b-0 hover:bg-tint/30 motion-safe:animate-fade-up ${cols}`}
             >
@@ -458,7 +445,7 @@ function ListView({
                 </span>
               </span>
 
-              <RowMenu note={note} status={status} />
+              <NoteQuickActions note={note} status={status} className="justify-self-end" revealOnHover={false} />
 
               {/* Small screens: details drop under the title */}
               <span className="col-span-2 flex flex-wrap items-center gap-x-3 text-[11px] text-gray-500 md:hidden">
@@ -478,11 +465,26 @@ function ListView({
 
 /* ---------- Page ---------- */
 
-export function NoteList({ status }: { status: NoteStatus }) {
+export function NoteList({
+  status,
+  folderId,
+  folderName,
+}: {
+  status: NoteStatus;
+  folderId?: string;
+  folderName?: string;
+}) {
   const router = useRouter();
   const reduce = useReducedMotion();
-  const query = useSearchParams().get("q") ?? "";
-  const { data: notes, error, isLoading } = useNotes(status, query);
+  const searchQuery = useSearchParams().get("q") ?? "";
+  const query = folderId ? "" : searchQuery;
+  const allNotes = useNotes(status, query);
+  const folderNotes = useFolderNotes(folderId ?? null);
+  const source = folderId
+    ? folderNotes
+    : { notes: allNotes.data, error: allNotes.error, isLoading: allNotes.isLoading, hasMore: false, isLoadingMore: false, loadMore: undefined };
+  const { notes, error, isLoading, hasMore, isLoadingMore, loadMore } = source;
+
   const { createNote } = useNoteActions();
 
   const [creating, setCreating] = useState(false);
@@ -502,7 +504,9 @@ export function NoteList({ status }: { status: NoteStatus }) {
     localStorage.setItem(VIEW_KEY, next);
   }
 
-  const { title, description } = META[status];
+  const { title: metaTitle, description: metaDescription } = META[status];
+  const title = folderId ? (folderName ?? "Folder") : metaTitle;
+  const description = folderId ? "Notes filed in this folder." : metaDescription;
   const total = notes?.length;
   const hasPinField = !!notes?.some((n) => details(n).hasPinField);
   const pinnedCount = notes?.filter((n) => details(n).pinned).length ?? 0;
@@ -560,7 +564,7 @@ export function NoteList({ status }: { status: NoteStatus }) {
 
           <div className="flex items-center gap-3">
             <ViewToggle view={view} onChange={changeView} />
-            {status === "active" && (
+            {status === "active" && !folderId && (
               <Button
                 type="button"
                 onClick={handleInscribe}
@@ -624,6 +628,15 @@ export function NoteList({ status }: { status: NoteStatus }) {
             )}
           </motion.div>
         </AnimatePresence>
+      )}
+
+      {hasMore && loadMore && (
+        <div className="mt-8 flex justify-center">
+          <Button type="button" variant="outline" onClick={loadMore} disabled={isLoadingMore} className="rounded-full">
+              {isLoadingMore && <Loader2 size={16} className="animate-spin" />}
+              {isLoadingMore ? "Loading..." : "Load more"}
+          </Button>
+        </div>
       )}
     </section>
   );

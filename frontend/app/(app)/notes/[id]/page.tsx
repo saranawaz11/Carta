@@ -4,6 +4,9 @@ import { Fraunces } from "next/font/google";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { VoiceNote } from "@/components/voice-note";
+import { RichNoteEditor } from "@/components/rich-note-editor";
+import { richContentToText, textToRichContent } from "@/lib/rich-notes";
+import type { Editor, JSONContent } from "@tiptap/react";
 import {
   use,
   useCallback,
@@ -40,6 +43,7 @@ import type { LucideIcon } from "lucide-react";
 import { NotesPanel } from "@/components/notes-panel";
 import { TagChip } from "@/components/tag-chip";
 import { useTags } from "@/lib/tags";
+import { FolderMove } from "@/components/folder-move";
 import { noteDates } from "@/lib/note-dates";
 import { Note, useNote, useNoteActions } from "@/lib/notes";
 import { formatDeadline, useNoteSummary } from "@/lib/summary";
@@ -499,30 +503,35 @@ export default function NotePage({
   const loadedNoteId = useRef<string | null>(null);
   const lastAttempt = useRef<string | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
-  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<Editor | null>(null);
+  const initialRich = note
+    ? (note.content_rich ?? textToRichContent(note.content))
+    : null;
+  const [richContent, setRichContent] = useState<JSONContent | null>(null);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
-  const voiceInsertionRef = useRef<{
-    base: string;
-    position: number;
-    end: number;
-  } | null>(null);
+  const voiceInsertionRef = useRef<{ from: number; to: number } | null>(null);
   const voiceActive = voiceState === "connecting" || voiceState === "listening";
 
   const handleVoiceStart = useCallback(() => {
-    const position = contentRef.current?.selectionStart ?? content.length;
-    voiceInsertionRef.current = { base: content, position, end: position };
-  }, [content]);
+    const at = editorRef.current?.state.selection.to ?? 1;
+    voiceInsertionRef.current = { from: at, to: at };
+  }, []);
 
+  // Each transcript is cumulative, so it replaces the text inserted so far
   const handleVoiceTranscript = useCallback((transcript: string) => {
+    const editor = editorRef.current;
     const insertion = voiceInsertionRef.current;
-    if (!insertion) return;
-    insertion.end = insertion.position + transcript.length;
-    setContent(
-      insertion.base.slice(0, insertion.position) +
-        transcript +
-        insertion.base.slice(insertion.position),
-    );
+    if (!editor || !insertion) return;
+    const chain = editor.chain().deleteRange({
+      from: insertion.from,
+      to: insertion.to,
+    });
+    if (transcript) {
+      chain.insertContentAt(insertion.from, { type: "text", text: transcript });
+    }
+    chain.run();
+    insertion.to = insertion.from + transcript.length;
   }, []);
 
   const handleVoiceState = useCallback((next: VoiceState) => {
@@ -573,13 +582,6 @@ export default function NotePage({
     if (note) saveTags(note.tags.filter((item) => item !== tag));
   }
   useAutoResize(titleRef, title);
-  useAutoResize(contentRef, content);
-  useLayoutEffect(() => {
-    if (voiceActive || !voiceInsertionRef.current) return;
-    const { end } = voiceInsertionRef.current;
-    contentRef.current?.setSelectionRange(end, end);
-    voiceInsertionRef.current = null;
-  }, [content, voiceActive]);
 
   // Restore the docked panel's state before first paint so it doesn't jump
   useLayoutEffect(() => {
@@ -603,26 +605,28 @@ export default function NotePage({
       loadedNoteId.current = note.id;
       setTitle(note.title);
       setContent(note.content);
+      setRichContent(initialRich);
     }
-  }, [note]);
+  }, [note, initialRich]);
 
   useEffect(() => {
-    if (
-      !note ||
-      voiceActive ||
-      loadedNoteId.current !== note.id ||
-      (title === note.title && content === note.content) ||
-      note.deleted_at !== null
-    ) {
+    if (!note || voiceActive || loadedNoteId.current !== note.id || note.deleted_at !== null) {
       return;
     }
-    const attempt = `${note.id}\u0000${title}\u0000${content}`;
+    const baseRich = note.content_rich ?? textToRichContent(note.content);
+    const richChanged =
+      richContent !== null &&
+      JSON.stringify(richContent) !== JSON.stringify(baseRich);
+    if (!richChanged && title === note.title && content === note.content) {
+      return;
+    }
+    const attempt = `${note.id}\u0000${title}\u0000${content}\u0000${JSON.stringify(richContent)}`;
     if (lastAttempt.current === attempt) return;
     const timeout = setTimeout(() => {
       lastAttempt.current = attempt;
       setSaving(true);
       setSaveError(null);
-      void updateNote(id, note, { title, content })
+      void updateNote(id, note, { title, content, content_rich: richContent })
         .then(() => setSaving(false))
         .catch((cause: unknown) => {
           setSaving(false);
@@ -632,7 +636,7 @@ export default function NotePage({
         });
     }, 800);
     return () => clearTimeout(timeout);
-  }, [content, id, note, title, updateNote, voiceActive]);
+  }, [content, id, note, richContent, title, updateNote, voiceActive]);
 
   // Close the notes drawer after picking a note
   useEffect(() => setNotesOpen(false), [id]);
@@ -823,6 +827,10 @@ export default function NotePage({
               <span>{minutes} min read</span>
             </p>
 
+            <div className="mb-4">
+              <FolderMove note={note} />
+            </div>
+
             <div className="mb-6 flex flex-wrap items-center gap-2">
               {note.tags.map((tag) => (
                 <TagChip
@@ -895,7 +903,7 @@ export default function NotePage({
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
-                  contentRef.current?.focus();
+                  editorRef.current?.commands.focus("start");
                 }
               }}
               placeholder="Untitled"
@@ -929,15 +937,18 @@ export default function NotePage({
               />
             )}
 
-            <textarea
-              ref={contentRef}
-              aria-label="Note content"
-              value={content}
-              readOnly={voiceActive}
-              onChange={(event) => setContent(event.target.value)}
-              placeholder="Write your note..."
-              className={`${display.className} mt-8 block min-h-[50vh] w-full resize-none overflow-hidden bg-transparent text-lg font-normal leading-8 text-gray-800 outline-none placeholder:text-gray-300`}
-            />
+            <div className={`${display.className} mt-8 min-h-[50vh] text-lg leading-8`}>
+              <RichNoteEditor
+                key={note?.id}
+                content={initialRich}
+                editorRef={editorRef}
+                disabled={voiceActive}
+                onChange={(json) => {
+                  setRichContent(json);
+                  setContent(richContentToText(json));
+                }}
+              />
+            </div>
           </div>
 
           <p aria-live="polite" className="sr-only">

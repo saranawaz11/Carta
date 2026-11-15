@@ -48,8 +48,9 @@ SYSTEM_PROMPT = (
     "match, list their titles and ask which one, without calling propose_*. If "
     "none match, say so.\n"
     "4. For an update, first call read_note, then call propose_update_note with "
-    "the note's COMPLETE new title and content (the existing text with the "
-    "requested change applied, nothing lost).\n"
+    "the note's COMPLETE new content (the existing text with the requested "
+    "change applied, nothing lost). Pass the new title only if the user named "
+    "one; otherwise pass an empty title and a title will be suggested.\n"
     "5. After a propose_* call, write one short sentence describing it. Never "
     "claim the change is done until the user confirms.\n"
     "6. If the conversation says 'yes'/'go ahead' but no action is pending "
@@ -370,13 +371,19 @@ class SearchNotesArgs(BaseModel):
 
 
 class CreateNoteArgs(BaseModel):
-    title: str = Field(description="The title of the note to create")
+    title: str = Field(
+        default="",
+        description="The note title; empty if the user did not name one, so one is generated",
+    )
     content: str = Field(description="The note content")
 
 
 class UpdateNoteArgs(BaseModel):
     note_id: UUID = Field(description="The ID of the note to update")
-    title: str = Field(description="The note's proposed new title")
+    title: str = Field(
+        default="",
+        description="The note's proposed new title; empty if the user did not name one",
+    )
     content: str = Field(description="The note's proposed new content")
 
 
@@ -444,6 +451,8 @@ def create_note(title: str, content: str, config: RunnableConfig) -> str:
     """Create a note immediately and return its ID and title."""
     user_id, configurable = _tool_context(config)
     create = _callback(configurable, "create_note")
+    if not title.strip():
+        title = suggest_note_title(content)
     note = create(title, content, user_id)
     return json.dumps(
         {"created_note": {"note_id": str(note.id), "title": note.title or "Untitled"}}
@@ -484,6 +493,7 @@ def _propose(
     note_id: UUID,
     changes: dict[str, str],
     config: RunnableConfig,
+    title_suggested: bool = False,
 ) -> str:
     user_id, configurable = _tool_context(config)
     get_note = _callback(configurable, "get_note")
@@ -498,6 +508,7 @@ def _propose(
                 "note_title": note.title or "Untitled",
                 "expected_updated_at": note.updated_at.isoformat(),
                 "changes": changes,
+                "title_suggested": title_suggested,
             }
         }
     )
@@ -508,8 +519,15 @@ def propose_update_note(
     note_id: UUID, title: str, content: str, config: RunnableConfig
 ) -> str:
     """Propose updated title and content; do not modify the note."""
+    title_suggested = not title.strip()
+    if title_suggested:
+        title = suggest_note_title(content)
     return _propose(
-        "update", note_id, {"title": title, "content": content}, config
+        "update",
+        note_id,
+        {"title": title, "content": content},
+        config,
+        title_suggested=title_suggested,
     )
 
 
@@ -846,3 +864,26 @@ def summarize_note(
             ),
         ]
     )
+
+
+TITLE_PROMPT = (
+    "You write short, specific titles for notes. Reply with only the title, "
+    "at most 60 characters, without quotes or trailing punctuation."
+)
+
+
+def suggest_note_title(content: str, avoid: str | None = None) -> str:
+    model = ChatOpenAI(
+        model=config.OPENAI_CHAT_MODEL,
+        api_key=config.OPENAI_API_KEY or None,
+        temperature=0.7,
+    )
+    avoid_line = f"\nThe title must differ from: {avoid}" if avoid else ""
+    response = model.invoke(
+        [
+            SystemMessage(TITLE_PROMPT),
+            HumanMessage(f"Note content:\n{content[:4000]}{avoid_line}"),
+        ]
+    )
+    title = _text_content(response.content).strip().strip("\"'").strip()
+    return title[:60] or "Untitled note"

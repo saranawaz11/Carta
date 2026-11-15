@@ -12,9 +12,41 @@ class Base(DeclarativeBase):
     pass
 
 
+class Folder(Base):
+    __tablename__ = "folders"
+    __table_args__ = (
+        Index(
+            "uq_folders_clerk_user_id_lower_name",
+            "clerk_user_id",
+            text("lower(name)"),
+            unique=True,
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    clerk_user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class Note(Base):
     __tablename__ = "notes"
-    __table_args__ = (Index("ix_notes_clerk_user_id", "clerk_user_id"),)
+    __table_args__ = (
+        Index("ix_notes_clerk_user_id", "clerk_user_id"),
+        Index("ix_notes_clerk_user_id_folder_id", "clerk_user_id", "folder_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
@@ -31,6 +63,9 @@ class Note(Base):
     )
     tags: Mapped[list[str]] = mapped_column(
         ARRAY(Text), nullable=False, server_default=text("'{}'")
+    )
+    folder_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("folders.id", ondelete="SET NULL"), nullable=True
     )
     content_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     embedded_hash: Mapped[str | None] = mapped_column(Text, nullable=True)

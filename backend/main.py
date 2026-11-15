@@ -5,6 +5,7 @@ from core import config
 from routes import (
     capture,
     chat,
+    folders,
     me,
     note_summaries,
     notes,
@@ -18,12 +19,13 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.FRONTEND_ORIGINS,
-    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(me.router)
 app.include_router(notes.router)
+app.include_router(folders.router)
 app.include_router(note_summaries.router)
 app.include_router(tags.router)
 app.include_router(chat.router)

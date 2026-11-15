@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from core.auth import get_current_user_id
 from core.db import get_db
-from schemas import NoteOut, NoteUpdate
+from schemas import NoteFolderUpdate, NoteOut, NoteUpdate
+from services import folders as folders_service
 from services import notes as notes_service
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
@@ -49,6 +50,16 @@ def update_note(
     db: Session = Depends(get_db),
 ):
     return notes_service.update_note(db, note_id, clerk_user_id, changes, background)
+
+
+@router.put("/{note_id}/folder", response_model=NoteOut)
+def move_note_to_folder(
+    note_id: UUID,
+    body: NoteFolderUpdate,
+    clerk_user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    return folders_service.move_note(db, note_id, clerk_user_id, body.folder_id)
 
 
 @router.post("/{note_id}/archive", response_model=NoteOut)

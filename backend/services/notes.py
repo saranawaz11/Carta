@@ -88,6 +88,9 @@ def update_note(
     values = changes.model_dump(exclude_unset=True)
     if "tags" in values:
         values["tags"] = normalize_tags(values["tags"])
+    # Plain text changed without its rich form (e.g. Carta AI edits): drop the stale rich form
+    if "content" in values and "content_rich" not in values:
+        values["content_rich"] = None
     values["content_hash"] = embedding.compute_hash(
         values.get("title", note.title), values.get("content", note.content)
     )

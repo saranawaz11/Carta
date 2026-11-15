@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 CLERK_ISSUER = os.environ.get("CLERK_ISSUER", "").rstrip("/")
 CLERK_AUTHORIZED_PARTIES = [
     p.strip()

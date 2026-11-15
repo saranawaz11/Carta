@@ -15,8 +15,7 @@ import {
   ShieldAlert,
   Trash2,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-
+import { DeleteConfirmModal } from "@/components/delete-confirm-modal";
 import { Note, useNoteActions, useNotes } from "@/lib/notes";
 
 const display = Fraunces({ subsets: ["latin"], display: "swap" });
@@ -118,56 +117,6 @@ const btnIdle = "text-gray-700 hover:bg-red-50 hover:text-red-700";
 const cardBtn =
   "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-[background-color,color,opacity] duration-200 disabled:pointer-events-none disabled:opacity-40";
 
-// Two-step button: first click arms it, second click confirms. Resets after 4s.
-function ConfirmButton({
-  label,
-  confirmLabel,
-  icon: Icon,
-  onConfirm,
-  disabled,
-  base,
-}: {
-  label: string;
-  confirmLabel: string;
-  icon: LucideIcon;
-  onConfirm: () => void;
-  disabled?: boolean;
-  base: string;
-}) {
-  const [armed, setArmed] = useState(false);
-
-  useEffect(() => {
-    if (!armed) return;
-    const timer = setTimeout(() => setArmed(false), 4000);
-    return () => clearTimeout(timer);
-  }, [armed]);
-
-  useEffect(() => {
-    if (disabled) setArmed(false);
-  }, [disabled]);
-
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={() => {
-        if (armed) {
-          setArmed(false);
-          onConfirm();
-        } else {
-          setArmed(true);
-        }
-      }}
-      className={`${base} ${
-        armed ? "bg-red-700 text-white hover:bg-red-800" : "text-red-700 hover:bg-red-100"
-      }`}
-    >
-      <Icon size={15} />
-      {armed ? confirmLabel : label}
-    </button>
-  );
-}
-
 function SkeletonGrid() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
@@ -195,6 +144,7 @@ export function VaultList({ status }: { status: VaultStatus }) {
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [actionError, setActionError] = useState<string | null>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
+  const [purgeTargets, setPurgeTargets] = useState<Note[] | null>(null);
 
   const { title, description, banner, empty } = META[status];
   const sorted = useMemo(() => sortNotes(notes ?? [], sort), [notes, sort]);
@@ -382,14 +332,15 @@ export function VaultList({ status }: { status: VaultStatus }) {
             Move to Trash
           </button>
         ) : (
-          <ConfirmButton
-            label="Delete permanently"
-            confirmLabel="Click again to confirm"
-            icon={Trash2}
-            base={btnBase}
+          <button
+            type="button"
             disabled={selectedNotes.length === 0 || busy}
-            onConfirm={() => void runBatch(selectedNotes, purgeNote)}
-          />
+            onClick={() => setPurgeTargets(selectedNotes)}
+            className={`${btnBase} text-red-700 hover:bg-red-100`}
+          >
+            <Trash2 size={15} />
+            Delete permanently
+          </button>
         )}
 
         <button
@@ -542,14 +493,15 @@ export function VaultList({ status }: { status: VaultStatus }) {
                       <Trash2 size={14} />
                     </button>
                   ) : (
-                    <ConfirmButton
-                      label="Delete permanently"
-                      confirmLabel="Confirm?"
-                      icon={Trash2}
-                      base={cardBtn}
+                    <button
+                      type="button"
                       disabled={isBusy}
-                      onConfirm={() => void runBatch([note], purgeNote)}
-                    />
+                      onClick={() => setPurgeTargets([note])}
+                      className={`${cardBtn} text-red-700 hover:bg-red-100`}
+                    >
+                      <Trash2 size={15} />
+                      Delete permanently
+                    </button>
                   )}
                 </div>
               </li>
@@ -557,6 +509,33 @@ export function VaultList({ status }: { status: VaultStatus }) {
           })}
         </ul>
       )}
+
+      <DeleteConfirmModal
+        isOpen={purgeTargets !== null}
+        isDeleting={busy}
+        title="Delete permanently"
+        confirmLabel="Delete permanently"
+        footnote="This can't be undone."
+        body={
+          purgeTargets?.length === 1 ? (
+            <p className="text-sm text-gray-600">
+              Permanently delete{" "}
+              <span className="font-semibold text-ink">&ldquo;{purgeTargets[0].title.trim() || "Untitled"}&rdquo;</span>?
+            </p>
+          ) : (
+            <p className="text-sm text-gray-600">
+              Permanently delete{" "}
+              <span className="font-semibold text-ink">{purgeTargets?.length ?? 0} notes</span>?
+            </p>
+          )
+        }
+        onDismiss={() => setPurgeTargets(null)}
+        onConfirm={() => {
+          const targets = purgeTargets;
+          setPurgeTargets(null);
+          if (targets) void runBatch(targets, purgeNote);
+        }}
+      />
     </section>
   );
 }

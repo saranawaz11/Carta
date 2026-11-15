@@ -8,9 +8,13 @@ import { useSWRConfig } from "swr";
 import { ArrowUp, ArrowUpRight, FileText, Loader2, Sparkles } from "lucide-react";
 
 import { ActionCard, type PendingAction } from "@/components/action-card";
+import { DeleteConfirmModal } from "@/components/delete-confirm-modal";
 import { Markdown } from "@/components/markdown";
+import { TitleConfirmModal } from "@/components/title-confirm-modal";
 import { apiFetch } from "@/lib/api";
+import { getChatHistory, saveChatHistory } from "@/lib/chat-history";
 import { invalidateNotes } from "@/lib/notes";
+import { suggestTitle } from "@/lib/title-suggestion";
 
 const display = Fraunces({ subsets: ["latin"], display: "swap" });
 
@@ -79,7 +83,38 @@ export default function AskPage() {
   const [loading, setLoading] = useState(false);
   const [confirmingIndex, setConfirmingIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+
+  // Restore the Ask thread from Redis so it survives route changes.
+  useEffect(() => {
+    let cancelled = false;
+    getChatHistory(getToken)
+      .then((history) => {
+        if (cancelled) return;
+        if (history.length > 0) setMessages(history as Message[]);
+        setHistoryLoaded(true);
+      })
+      .catch((cause) => {
+        console.error("Failed to load chat history:", cause);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken]);
+
+  // Persist the thread after each settled change. Waiting for loading to finish
+  // avoids saving a half-streamed answer.
+  useEffect(() => {
+    if (!historyLoaded || loading) return;
+    const timer = setTimeout(() => {
+      saveChatHistory(messages, getToken).catch((cause) => {
+        console.error("Failed to save chat history:", cause);
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [messages, getToken, historyLoaded, loading]);
 
   // Keep the latest message in view while streaming
   useEffect(() => {
@@ -251,8 +286,57 @@ export default function AskPage() {
     }
   }
 
+  function isModalAction(action: PendingAction) {
+    return action.action !== "archive";
+  }
+
+  function clearPendingAction(messageIndex: number) {
+    setMessages((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === messageIndex ? { ...item, pending_action: null } : item,
+      ),
+    );
+  }
+
+  async function regenerateTitle(action: PendingAction, messageIndex: number) {
+    if (regenerating) return;
+    setRegenerating(true);
+    try {
+      const title = await suggestTitle(
+        action.changes.content ?? "",
+        action.changes.title ?? null,
+        getToken,
+      );
+      setMessages((current) =>
+        current.map((item, itemIndex) =>
+          itemIndex === messageIndex && item.pending_action
+            ? {
+                ...item,
+                pending_action: {
+                  ...item.pending_action,
+                  changes: { ...item.pending_action.changes, title },
+                },
+              }
+            : item,
+        ),
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to regenerate the title");
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
+  const modalIndex = messages.reduce<number | null>(
+    (found, message, index) =>
+      message.pending_action && isModalAction(message.pending_action) ? index : found,
+    null,
+  );
+  const modalAction = modalIndex !== null ? messages[modalIndex].pending_action ?? null : null;
+
   return (
     <div className="relative mx-auto flex min-h-[calc(100dvh-9rem)] w-full max-w-3xl flex-col md:min-h-full">
+
       {/* Header */}
       <header className="mb-8 flex flex-col gap-3 motion-safe:animate-fade-up">
         <span className="inline-flex w-fit items-center gap-2 rounded-full bg-tint px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-brand">
@@ -364,7 +448,7 @@ export default function AskPage() {
                       </Link>
                     )}
 
-                    {message.pending_action && (
+                    {message.pending_action && !isModalAction(message.pending_action) && (
                       <ActionCard
                         action={message.pending_action}
                         disabled={confirmingIndex !== null}
@@ -425,6 +509,30 @@ export default function AskPage() {
           </button>
         </form>
       </div>
+
+      {modalAction && modalIndex !== null && modalAction.action === "delete" && (
+        <DeleteConfirmModal
+          isOpen
+          noteTitle={modalAction.note_title}
+          isDeleting={confirmingIndex === modalIndex}
+          onConfirm={() => void confirmAction(modalAction, modalIndex)}
+          onDismiss={() => clearPendingAction(modalIndex)}
+        />
+      )}
+
+      {modalAction && modalIndex !== null && modalAction.action === "update" && (
+        <TitleConfirmModal
+          isOpen
+          currentTitle={modalAction.note_title}
+          suggestedTitle={modalAction.changes.title ?? ""}
+          content={modalAction.changes.content ?? ""}
+          isRegenerating={regenerating}
+          isConfirming={confirmingIndex === modalIndex}
+          onConfirm={() => void confirmAction(modalAction, modalIndex)}
+          onRegenerate={() => void regenerateTitle(modalAction, modalIndex)}
+          onDismiss={() => clearPendingAction(modalIndex)}
+        />
+      )}
     </div>
   );
 }

@@ -14,6 +14,7 @@ export type Note = {
   content: string;
   content_rich: object | null;
   tags: string[];
+  folder_id: string | null;
   archived_at: string | null;
   deleted_at: string | null;
   created_at: string;

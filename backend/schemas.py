@@ -1,6 +1,6 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -14,10 +14,37 @@ class NoteOut(BaseModel):
     content: str
     content_rich: dict | None = None
     tags: list[str]
+    folder_id: UUID | None = None
     archived_at: datetime | None
     deleted_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class FolderCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+
+
+class FolderUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+
+
+class FolderOut(BaseModel):
+    id: UUID
+    name: str
+    note_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class NoteFolderUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    folder_id: UUID | None
 
 
 class NoteUpdate(BaseModel):
@@ -25,6 +52,7 @@ class NoteUpdate(BaseModel):
 
     title: str | None = None
     content: str | None = None
+    content_rich: dict | None = None
     tags: list[str] | None = None
 
     @model_validator(mode="after")
@@ -47,6 +75,11 @@ class PendingAction(BaseModel):
     note_title: str
     expected_updated_at: datetime
     changes: dict[str, str]
+    title_suggested: bool = False
+
+
+class ChatHistoryIn(BaseModel):
+    messages: list[dict[str, Any]] = Field(max_length=200)
 
 
 class ChatRequest(BaseModel):
@@ -88,6 +121,16 @@ class ConfirmRequest(BaseModel):
 class ConfirmResponse(BaseModel):
     message: str
     note: NoteOut
+
+
+class TitleSuggestionRequest(BaseModel):
+    content: str = Field(min_length=1)
+    avoid: str | None = Field(default=None, max_length=500)
+
+
+class TitleSuggestionResponse(BaseModel):
+    title: str
+
 
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=500)

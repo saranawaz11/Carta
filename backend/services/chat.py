@@ -163,3 +163,7 @@ def confirm(
         )
         message = "Note deleted."
     return {"message": message, "note": note}
+
+
+def generate_title_suggestion(current_content: str, avoid: str | None = None) -> str:
+    return llm.suggest_note_title(current_content, avoid)

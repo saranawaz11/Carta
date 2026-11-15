@@ -1,9 +1,12 @@
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, type Editor, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
+import TextStyle from "@tiptap/extension-text-style";
+import Color from "@tiptap/extension-color";
+import Highlight from "@tiptap/extension-highlight";
 import {
   Bold,
   Italic,
@@ -20,19 +23,26 @@ import {
   Link as LinkIcon,
   Undo2,
   Redo2,
+  Palette,
+  Highlighter,
+  RemoveFormatting,
 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState, type MutableRefObject } from "react";
+
+import { useDismiss } from "@/lib/use-dismiss";
 
 interface RichNoteEditorProps {
-  content: object | null;
-  onChange: (content: object) => void;
+  content: JSONContent | null;
+  onChange: (content: JSONContent) => void;
   disabled?: boolean;
+  editorRef?: MutableRefObject<Editor | null>;
 }
 
 export function RichNoteEditor({
   content,
   onChange,
   disabled = false,
+  editorRef,
 }: RichNoteEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -42,6 +52,9 @@ export function RichNoteEditor({
         },
       }),
       Underline,
+      TextStyle,
+      Color,
+      Highlight.configure({ multicolor: true }),
       Link.configure({
         openOnClick: false,
         linkOnPaste: true,
@@ -60,6 +73,14 @@ export function RichNoteEditor({
       onChange(ed.getJSON());
     },
   });
+
+  useEffect(() => {
+    editor?.setEditable(!disabled);
+  }, [editor, disabled]);
+
+  useEffect(() => {
+    if (editorRef) editorRef.current = editor ?? null;
+  }, [editor, editorRef]);
 
   const toggleBold = useCallback(() => {
     editor?.chain().focus().toggleBold().run();
@@ -121,9 +142,33 @@ export function RichNoteEditor({
     }
   }, [editor]);
 
+  const applyTextColor = useCallback(
+    (color: string | null) => {
+      const chain = editor?.chain().focus();
+      if (!chain) return;
+      if (color) chain.setColor(color).run();
+      else chain.unsetColor().run();
+    },
+    [editor],
+  );
+
+  const applyHighlight = useCallback(
+    (color: string | null) => {
+      const chain = editor?.chain().focus();
+      if (!chain) return;
+      if (color) chain.setHighlight({ color }).run();
+      else chain.unsetHighlight().run();
+    },
+    [editor],
+  );
+
+  const clearColorAndHighlight = useCallback(() => {
+    editor?.chain().focus().unsetColor().unsetHighlight().run();
+  }, [editor]);
+
   return (
     <div className="flex flex-col gap-2 w-full">
-      <div className="flex flex-wrap gap-1 p-2 border border-gray-300 rounded-t-md bg-gray-50">
+      <div className="flex flex-wrap items-center gap-1 rounded-t-xl border border-line bg-panel px-2 py-1.5">
         <ToolbarButton
           onClick={toggleBold}
           active={editor?.isActive("bold")}
@@ -249,6 +294,32 @@ export function RichNoteEditor({
 
         <ToolbarDivider />
 
+        <SwatchPopover
+          icon={<Palette size={16} />}
+          title="Text Color"
+          options={TEXT_COLORS}
+          disabled={disabled}
+          onPick={applyTextColor}
+        />
+
+        <SwatchPopover
+          icon={<Highlighter size={16} />}
+          title="Highlight"
+          options={HIGHLIGHT_COLORS}
+          disabled={disabled}
+          onPick={applyHighlight}
+        />
+
+        <ToolbarButton
+          onClick={clearColorAndHighlight}
+          disabled={disabled}
+          title="Clear Color and Highlight"
+        >
+          <RemoveFormatting size={16} />
+        </ToolbarButton>
+
+        <ToolbarDivider />
+
         <ToolbarButton
           onClick={() => editor?.chain().focus().undo().run()}
           disabled={disabled}
@@ -268,8 +339,101 @@ export function RichNoteEditor({
 
       <EditorContent
         editor={editor}
-        className="prose prose-sm dark:prose-invert max-w-none focus:outline-none p-4 border border-t-0 border-gray-300 rounded-b-md bg-white min-h-96"
+        className="rounded-b-xl border border-t-0 border-line bg-panel p-4 text-ink [&_.ProseMirror]:min-h-[50vh] [&_.ProseMirror]:outline-none [&_.ProseMirror_h1]:mb-2 [&_.ProseMirror_h1]:text-2xl [&_.ProseMirror_h1]:font-semibold [&_.ProseMirror_h2]:mb-2 [&_.ProseMirror_h2]:text-xl [&_.ProseMirror_h2]:font-semibold [&_.ProseMirror_h3]:mb-2 [&_.ProseMirror_h3]:text-lg [&_.ProseMirror_h3]:font-semibold [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-6 [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-6 [&_.ProseMirror_blockquote]:border-l-2 [&_.ProseMirror_blockquote]:border-line-strong [&_.ProseMirror_blockquote]:pl-4 [&_.ProseMirror_blockquote]:text-gray-600 [&_.ProseMirror_code]:rounded [&_.ProseMirror_code]:bg-tint [&_.ProseMirror_code]:px-1 [&_.ProseMirror_pre]:rounded-md [&_.ProseMirror_pre]:bg-tint [&_.ProseMirror_pre]:p-3 [&_.ProseMirror_a]:text-brand [&_.ProseMirror_a]:underline"
       />
+    </div>
+  );
+}
+
+interface SwatchOption {
+  label: string;
+  /** null removes the mark. */
+  value: string | null;
+  swatch?: string;
+  /** Shown instead of a swatch for options without a color. */
+  glyph?: string;
+}
+
+const TEXT_COLORS: SwatchOption[] = [
+  { label: "Default", value: null, glyph: "A" },
+  { label: "Red", value: "#dc2626", swatch: "#dc2626" },
+  { label: "Orange", value: "#ea580c", swatch: "#ea580c" },
+  { label: "Amber", value: "#ca8a04", swatch: "#ca8a04" },
+  { label: "Green", value: "#16a34a", swatch: "#16a34a" },
+  { label: "Teal", value: "#0d9488", swatch: "#0d9488" },
+  { label: "Blue", value: "#2563eb", swatch: "#2563eb" },
+  { label: "Violet", value: "#7c3aed", swatch: "#7c3aed" },
+  { label: "Pink", value: "#db2777", swatch: "#db2777" },
+  { label: "Gray", value: "#6b7280", swatch: "#6b7280" },
+];
+
+const HIGHLIGHT_COLORS: SwatchOption[] = [
+  { label: "Yellow", value: "#fef08a", swatch: "#fef08a" },
+  { label: "Green", value: "#bbf7d0", swatch: "#bbf7d0" },
+  { label: "Blue", value: "#bfdbfe", swatch: "#bfdbfe" },
+  { label: "Pink", value: "#fbcfe8", swatch: "#fbcfe8" },
+  { label: "Orange", value: "#fed7aa", swatch: "#fed7aa" },
+  { label: "Violet", value: "#ddd6fe", swatch: "#ddd6fe" },
+  { label: "Cyan", value: "#a5f3fc", swatch: "#a5f3fc" },
+  { label: "Red", value: "#fecaca", swatch: "#fecaca" },
+  { label: "Gray", value: "#e5e7eb", swatch: "#e5e7eb" },
+  { label: "Remove highlight", value: null, glyph: "×" },
+];
+
+function SwatchPopover({
+  icon,
+  title,
+  options,
+  disabled,
+  onPick,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  options: SwatchOption[];
+  disabled: boolean;
+  onPick: (value: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  const ref = useDismiss(open, close);
+
+  return (
+    <div ref={ref} className="relative">
+      <ToolbarButton
+        onClick={() => setOpen((v) => !v)}
+        active={open}
+        disabled={disabled}
+        title={title}
+      >
+        {icon}
+      </ToolbarButton>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label={title}
+          className="absolute left-0 top-full z-20 mt-1 grid grid-cols-5 gap-1.5 rounded-lg border border-line bg-panel p-2 shadow-md"
+        >
+          {options.map((option) => (
+            <button
+              key={option.label}
+              type="button"
+              role="option"
+              aria-selected={false}
+              aria-label={option.label}
+              title={option.label}
+              onClick={() => {
+                onPick(option.value);
+                setOpen(false);
+              }}
+              className="flex size-6 items-center justify-center rounded border border-line text-[10px] text-gray-500 hover:ring-2 hover:ring-red-300"
+              style={option.swatch ? { backgroundColor: option.swatch } : undefined}
+            >
+              {option.swatch ? null : option.glyph}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -294,11 +458,11 @@ function ToolbarButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`p-1.5 rounded transition-colors ${
+      className={`rounded-md p-1.5 transition-colors ${
         active
-          ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
-          : "bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-      } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+          ? "bg-tint text-brand"
+          : "text-gray-700 hover:bg-tint hover:text-brand"
+      } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
     >
       {children}
     </button>
@@ -306,5 +470,5 @@ function ToolbarButton({
 }
 
 function ToolbarDivider() {
-  return <div className="w-px bg-gray-300 dark:bg-gray-600 mx-1" />;
+  return <div className="mx-1 w-px self-stretch bg-line" />;
 }

@@ -1,10 +1,10 @@
-import { Content, Editor } from "@tiptap/react";
+import type { JSONContent } from "@tiptap/react";
 
 /**
  * Convert plain text to Tiptap editor JSON.
  * Creates a simple document with paragraphs from line breaks.
  */
-export function textToRichContent(plainText: string): Content {
+export function textToRichContent(plainText: string): JSONContent {
   if (!plainText.trim()) {
     return {
       type: "doc",
@@ -37,12 +37,11 @@ export function textToRichContent(plainText: string): Content {
  * Extract plain text projection from Tiptap editor JSON.
  * Produces deterministic, readable text for search and embeddings.
  */
-export function richContentToText(editor: Editor | null): string {
-  if (!editor) {
+export function richContentToText(doc: JSONContent | null): string {
+  if (!doc) {
     return "";
   }
 
-  const doc = editor.getJSON();
   const lines: string[] = [];
 
   function walkContent(content: Array<Record<string, unknown>>): void {

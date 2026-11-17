@@ -1,11 +1,8 @@
-version: '3.8'
 
 services:
   redis:
     image: redis:7-alpine
     container_name: carta-redis
-    ports:
-      - "6379:6379"
     volumes:
       - redis-data:/data
     command: redis-server --appendonly yes
@@ -14,31 +11,61 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
     networks:
       - carta-network
 
-  postgres:
-    image: postgres:16-alpine
-    container_name: carta-postgres
+  backend:
+    image: ${BACKEND_REPO}:v1.0.0
+    env_file:
+      - ./backend/.env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-carta}
-      POSTGRES_USER: ${POSTGRES_USER:-carta}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cartapassword}
+      REDIS_URL: redis://redis:6379/0
     ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - "8000:8000"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-carta}"]
-      interval: 5s
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/test', timeout=2)"
+        ]
+      interval: 30s
       timeout: 5s
-      retries: 5
+      retries: 3
+      start_period: 10s
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - carta-network
+
+  frontend:
+    image: ${FRONTEND_REPO}:v1.0.0
+    env_file:
+      - ./.env
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/', { redirect: 'manual' }).then(r => process.exit(r.status < 500 ? 0 : 1)).catch(() => process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
     networks:
       - carta-network
 
 volumes:
   redis-data:
-  postgres-data:
 
 networks:
   carta-network:

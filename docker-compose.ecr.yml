@@ -1,0 +1,18 @@
+services:
+  backend:
+    image: ${BACKEND_REPO}:v1.0.0
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    restart: unless-stopped
+
+  frontend:
+    image: ${FRONTEND_REPO}:v1.0.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    env_file:
+      - ./.env
+    restart: unless-stopped

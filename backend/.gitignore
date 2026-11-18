@@ -1,8 +1,13 @@
-﻿.venv/
+﻿
+# Python
+.venv/
 __pycache__/
-*.pyc
-.env*
 *.pyc
 *.pyo
 *.pyd
-*.pycache/
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.development

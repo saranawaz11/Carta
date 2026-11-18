@@ -1,5 +1,8 @@
 uv run fastapi dev
 
+For the complete local, Amazon ECR, EC2, and SSH deployment process, see
+[AWS_EC2_DEPLOYMENT.md](AWS_EC2_DEPLOYMENT.md).
+
 ## Application deployment with Docker Compose
 
 The root `docker-compose.yml` runs the Next.js frontend, FastAPI backend, and Redis. The backend uses Neon through `DATABASE_URL`; no local PostgreSQL service is started. Frontend and backend are published on host ports 3000 and 8000, and Redis is available only on the internal `carta-network` by default.

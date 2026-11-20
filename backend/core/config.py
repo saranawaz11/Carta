@@ -15,7 +15,9 @@ CLERK_AUTHORIZED_PARTIES = [
 FRONTEND_ORIGINS = [
     o.strip()
     for o in os.environ.get(
-        "FRONTEND_ORIGIN", "http://localhost:3000,http://127.0.0.1:3000"
+        "FRONTEND_ORIGIN",
+        "http://localhost:3000,http://127.0.0.1:3000,"
+        "http://localhost:3001,http://127.0.0.1:3001",
     ).split(",")
     if o.strip()
 ]

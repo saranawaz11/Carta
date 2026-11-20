@@ -2,7 +2,7 @@
   "name": "carta",
   "private": true,
   "scripts": {
-    "dev:backend": "uv run --directory backend fastapi dev",
+    "dev:backend": "uv run uvicorn main:app --port 8000 --reload",
     "dev:frontend": "npm --prefix frontend run dev",
     "lint:frontend": "npm --prefix frontend run lint"
   }

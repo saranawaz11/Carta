@@ -1,22 +1,35 @@
 ## Local development
 
-Run these commands from the repository root in separate terminals:
+Choose one local mode; do not run both at the same time on the default ports.
+
+For local Docker Compose:
+
+```powershell
+docker compose up -d --build
+```
+
+Open `http://localhost:3000`. The browser calls
+`NEXT_PUBLIC_API_URL=http://localhost:8000`.
+
+For host-based development, stop the Compose frontend and backend first, then
+run these commands from the repository root in separate terminals:
 
 ```powershell
 npm run dev:backend
 npm run dev:frontend
 ```
 
-The backend command starts FastAPI from `backend/`, where `main.py` and the
-backend project dependencies are located. The frontend is available at
-`http://localhost:3000` and proxies its API requests to the backend configured
-in `frontend/.env.local`.
+The backend command runs
+`uv run uvicorn main:app --port 8000 --reload` from the repository root. The
+root launcher loads the backend application and `backend/.env`. If port 3000
+is already occupied, Next.js selects port 3001; the local backend accepts
+either port. Prefer stopping the conflicting process so the browser continues
+to use port 3000.
 
 To run the commands directly instead:
 
 ```powershell
-Set-Location .\backend
-uv run fastapi dev
+uv run uvicorn main:app --port 8000 --reload
 ```
 
 ```powershell
@@ -24,7 +37,10 @@ Set-Location .\frontend
 npm run dev
 ```
 
-For the complete local, Amazon ECR, EC2, and SSH deployment process, see
+Keep only localhost values in local `.env`, `frontend/.env.local`, and
+`backend/.env`. Do not copy an EC2 IP or production origin into local files.
+Set deployment values in the PowerShell build command and in the separate
+environment files on EC2, as described in
 [AWS_EC2_DEPLOYMENT.md](AWS_EC2_DEPLOYMENT.md).
 
 ## Application deployment with Docker Compose

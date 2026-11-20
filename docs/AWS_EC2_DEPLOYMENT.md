@@ -121,8 +121,8 @@ REDIS_URL=redis://redis:6379/0
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require
 
 CLERK_ISSUER=https://your-clerk-instance.clerk.accounts.com
-CLERK_AUTHORIZED_PARTIES=http://localhost:3000,http://127.0.0.1:3000
-FRONTEND_ORIGIN=http://localhost:3000,http://127.0.0.1:3000
+CLERK_AUTHORIZED_PARTIES=http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001
+FRONTEND_ORIGIN=http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001
 
 OPENAI_API_KEY=your_openai_key
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
@@ -291,6 +291,14 @@ $env:NEXT_PUBLIC_CLERK_SIGN_UP_URL = "/sign-up"
 ```
 
 Use real values rather than the examples above.
+These shell values are used only for the production image build. They do not
+replace the localhost values in the workstation's `.env` or
+`frontend/.env.local`. Run `Remove-Item Env:NEXT_PUBLIC_API_URL,
+Env:NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, Env:NEXT_PUBLIC_CLERK_SIGN_IN_URL,
+Env:NEXT_PUBLIC_CLERK_SIGN_UP_URL` afterward when returning to local work.
+
+The EC2 host receives its own `.env` files in step 15. Do not copy that host's
+public IP back into the workstation's local environment files.
 
 ## 9. Build, tag, and push both images
 

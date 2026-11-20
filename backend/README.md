@@ -1,5 +1,16 @@
 # Voice transcription environment
 
+## Local development
+
+Start FastAPI from this `backend/` directory so Uvicorn can import `main:app`:
+
+```powershell
+uv run fastapi dev
+```
+
+From the repository root, use `npm run dev:backend`, which sets the backend
+working directory automatically.
+
 - `OPENAI_TRANSCRIBE_MODEL` defaults to `gpt-4o-transcribe`.
 - `VOICE_VAD_THRESHOLD` defaults to `0.4`.
 - `VOICE_SILENCE_MS` defaults to `1000`.

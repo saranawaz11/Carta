@@ -1,4 +1,28 @@
+## Local development
+
+Run these commands from the repository root in separate terminals:
+
+```powershell
+npm run dev:backend
+npm run dev:frontend
+```
+
+The backend command starts FastAPI from `backend/`, where `main.py` and the
+backend project dependencies are located. The frontend is available at
+`http://localhost:3000` and proxies its API requests to the backend configured
+in `frontend/.env.local`.
+
+To run the commands directly instead:
+
+```powershell
+Set-Location .\backend
 uv run fastapi dev
+```
+
+```powershell
+Set-Location .\frontend
+npm run dev
+```
 
 For the complete local, Amazon ECR, EC2, and SSH deployment process, see
 [AWS_EC2_DEPLOYMENT.md](AWS_EC2_DEPLOYMENT.md).

@@ -1,1 +1,9 @@
-{}
+{
+  "name": "carta",
+  "private": true,
+  "scripts": {
+    "dev:backend": "uv run --directory backend fastapi dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "lint:frontend": "npm --prefix frontend run lint"
+  }
+}
